@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { uploadMiddleware, handleFileUpload } from "./upload";
 import { 
   insertClientSchema, 
   insertEmployeeSchema, 
@@ -14,6 +15,26 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // File upload route
+  app.post("/api/upload", uploadMiddleware, handleFileUpload);
+
+  // File serving route for PO files
+  app.get("/files/:filename", (req, res) => {
+    try {
+      const { filename } = req.params;
+      const privateDir = process.env.PRIVATE_OBJECT_DIR;
+      
+      if (!privateDir) {
+        return res.status(500).json({ error: 'Object storage not configured' });
+      }
+      
+      const filePath = `${privateDir}/${filename}`;
+      res.sendFile(filePath, { root: '/' });
+    } catch (error) {
+      res.status(404).json({ error: 'File not found' });
+    }
+  });
+
   // Clients routes
   app.get("/api/clients", async (req, res) => {
     try {

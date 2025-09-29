@@ -10,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertJobSchema, type InsertJob, type Client, JOB_TYPES, type StageDeadlines } from "@shared/schema";
 import { z } from "zod";
-import { Calendar, User } from "lucide-react";
+import { Calendar, User, Upload, FileText, X } from "lucide-react";
 import StageDeadlineAllocation from "@/components/StageTimeAllocation";
 
 interface CreateJobFormProps {
@@ -33,6 +33,8 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploadingPO, setUploadingPO] = useState(false);
+  const [poFile, setPOFile] = useState<File | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -40,6 +42,23 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"]
   });
+
+  const uploadPOFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to upload PO file');
+    }
+    
+    const result = await response.json();
+    return result.url;
+  };
 
   const createJobMutation = useMutation({
     mutationFn: async (data: InsertJob) => {
@@ -123,6 +142,32 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
 
   const handleStageDeadlinesChange = (deadlines: StageDeadlines) => {
     setFormData(prev => ({ ...prev, stageDeadlines: deadlines }));
+  };
+
+  const handlePOFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) {
+        setErrors(prev => ({ ...prev, poFile: 'Please upload a PDF, JPG, or PNG file' }));
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, poFile: 'File size must be less than 5MB' }));
+        return;
+      }
+      
+      setPOFile(file);
+      setErrors(prev => ({ ...prev, poFile: '' }));
+    }
+  };
+
+  const removePOFile = () => {
+    setPOFile(null);
+    setErrors(prev => ({ ...prev, poFile: '' }));
   };
 
   // Format date for input
@@ -286,6 +331,62 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
             </div>
           </div>
 
+          {/* PO File Upload */}
+          <div className="space-y-2">
+            <Label>Purchase Order (PO) File</Label>
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+              {!poFile ? (
+                <div className="text-center">
+                  <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Upload PO file (PDF, JPG, PNG)
+                    </p>
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handlePOFileChange}
+                      className="hidden"
+                      id="po-file-upload"
+                      data-testid="input-po-file"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('po-file-upload')?.click()}
+                      data-testid="button-upload-po"
+                    >
+                      Choose File
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">{poFile.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({(poFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={removePOFile}
+                    data-testid="button-remove-po"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            {errors.poFile && (
+              <p className="text-sm text-destructive">{errors.poFile}</p>
+            )}
+          </div>
+
           {/* Stage Time Allocation */}
           {formData.jobType && (
             <StageDeadlineAllocation
@@ -299,10 +400,15 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
           <div className="flex gap-2 pt-4">
             <Button
               type="submit"
-              disabled={createJobMutation.isPending}
+              disabled={createJobMutation.isPending || uploadingPO}
               data-testid="button-submit-job"
             >
-              {createJobMutation.isPending ? "Creating Job..." : "Create Job & Generate Tasks"}
+              {uploadingPO 
+                ? "Uploading PO File..." 
+                : createJobMutation.isPending 
+                  ? "Creating Job..." 
+                  : "Create Job & Generate Tasks"
+              }
             </Button>
             {onCancel && (
               <Button
