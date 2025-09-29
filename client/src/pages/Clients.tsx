@@ -1,54 +1,44 @@
 import { useState } from "react";
 import ClientCard from "@/components/ClientCard";
+import CreateClientForm from "@/components/CreateClientForm";
+import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { Client } from "@shared/schema";
 
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
 
-  // TODO: Remove mock data when implementing real functionality
-  const mockClients = [
-    {
-      id: "1",
-      name: "John Smith",
-      company: "TechCorp Solutions",
-      email: "john@techcorp.com",
-      phone: "+1 555-0123",
-      activeJobs: 3,
-      totalJobs: 12
-    },
-    {
-      id: "2",
-      name: "Sarah Johnson",
-      company: "Green Earth Co",
-      email: "sarah@greenearth.org", 
-      phone: "+1 555-0456",
-      activeJobs: 1,
-      totalJobs: 8
-    },
-    {
-      id: "3",
-      name: "Mike Chen",
-      company: "Fashion Store",
-      email: "mike@fashionstore.com",
-      phone: "+1 555-0789",
-      activeJobs: 2,
-      totalJobs: 15
-    },
-    {
-      id: "4",
-      name: "Emma Wilson", 
-      company: "Local Events Co",
-      email: "emma@localevents.com",
-      phone: "+1 555-0321",
-      activeJobs: 0,
-      totalJobs: 4
-    }
-  ];
+  // Fetch real data
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"]
+  });
+
+  const { data: jobs = [] } = useQuery({
+    queryKey: ["/api/jobs"]
+  });
+
+  // Calculate job stats for each client
+  const clientsWithStats = clients.map(client => {
+    const clientJobs = jobs.filter((job: any) => job.clientId === client.id);
+    const activeJobs = clientJobs.filter((job: any) => !["completed", "delivered"].includes(job.status)).length;
+    
+    return {
+      ...client,
+      activeJobs,
+      totalJobs: clientJobs.length
+    };
+  });
 
   const handleCreateClient = () => {
-    console.log('Creating new client');
+    setIsCreateClientModalOpen(true);
+  };
+
+  const handleCreateClientSuccess = () => {
+    setIsCreateClientModalOpen(false);
   };
 
   const handleViewClient = (id: string) => {
@@ -64,7 +54,7 @@ export default function Clients() {
     console.log('Searching clients:', value);
   };
 
-  const filteredClients = mockClients.filter(client =>
+  const filteredClients = clientsWithStats.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -122,7 +112,7 @@ export default function Clients() {
         </div>
       )}
 
-      {mockClients.length === 0 && (
+      {clients.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">No clients yet</p>
           <Button onClick={handleCreateClient} data-testid="button-create-first-client">
@@ -131,6 +121,18 @@ export default function Clients() {
           </Button>
         </div>
       )}
+
+      {/* Create Client Modal */}
+      <Modal
+        isOpen={isCreateClientModalOpen}
+        onClose={() => setIsCreateClientModalOpen(false)}
+        title="Add New Client"
+      >
+        <CreateClientForm 
+          onSuccess={handleCreateClientSuccess}
+          onCancel={() => setIsCreateClientModalOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }

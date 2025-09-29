@@ -1,64 +1,69 @@
+import { useState } from "react";
 import DashboardStats from "@/components/DashboardStats";
 import DeadlineAlerts from "@/components/DeadlineAlerts";
 import JobCard from "@/components/JobCard";
+import CreateJobForm from "@/components/CreateJobForm";
+import Modal from "@/components/Modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Activity } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { Job, Client } from "@shared/schema";
 
 export default function Dashboard() {
-  // TODO: Remove mock data when implementing real functionality
-  const mockRecentJobs = [
-    {
-      id: "1",
-      title: "Business Card Print Run",
-      client: "TechCorp Solutions", 
-      jobType: "Business Cards",
-      quantity: 1000,
-      deadline: new Date("2024-01-15"),
-      status: "printing",
-      description: "Premium business cards with matte finish"
-    },
-    {
-      id: "2",
-      title: "Marketing Brochure",
-      client: "Green Earth Co",
-      jobType: "Brochures", 
-      quantity: 500,
-      deadline: new Date("2024-01-12"),
-      status: "qc"
-    }
-  ];
+  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
 
-  const mockDeadlineItems = [
-    {
-      id: "1",
-      title: "Business Card QC",
-      type: "task" as const,
-      client: "TechCorp Solutions",
-      deadline: new Date(),
-      status: "pending",
-      stage: "QC"
-    },
-    {
-      id: "2", 
-      title: "Urgent Flyers",
-      type: "job" as const,
-      client: "Event Co",
-      deadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      status: "printing"
-    }
-  ];
+  // Fetch real data
+  const { data: jobs = [] } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"]
+  });
+
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"]
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["/api/stats/jobs"]
+  });
+
+  const { data: alerts = [] } = useQuery({
+    queryKey: ["/api/alerts/deadlines"]
+  });
+
+  // Create client lookup map
+  const clientMap = new Map(clients.map(c => [c.id, c]));
+
+  // Get recent jobs (last 5)
+  const recentJobs = jobs
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 5)
+    .map(job => ({
+      id: job.id,
+      title: job.description || job.jobType,
+      client: clientMap.get(job.clientId)?.name || "Unknown Client",
+      jobType: job.jobType,
+      quantity: job.quantity,
+      deadline: new Date(job.deadline),
+      status: job.status,
+      description: job.description
+    }));
 
   const handleCreateJob = () => {
-    console.log('Creating new job');
+    setIsCreateJobModalOpen(true);
+  };
+
+  const handleCreateJobSuccess = () => {
+    setIsCreateJobModalOpen(false);
   };
 
   const handleViewJob = (id: string) => {
     console.log('Viewing job:', id);
+    // TODO: Navigate to job detail page
   };
 
   const handleViewDeadlineItem = (id: string, type: "job" | "task") => {
     console.log('Viewing deadline item:', type, id);
+    // TODO: Navigate to appropriate detail page
   };
 
   return (
@@ -79,10 +84,10 @@ export default function Dashboard() {
 
       {/* Stats */}
       <DashboardStats 
-        totalJobs={45}
-        activeJobs={12}
-        completedJobs={28}
-        overdueJobs={5}
+        totalJobs={stats?.totalJobs || 0}
+        activeJobs={stats?.activeJobs || 0}
+        completedJobs={stats?.completedJobs || 0}
+        overdueJobs={stats?.overdueJobs || 0}
       />
 
       {/* Main Content Grid */}
@@ -99,22 +104,44 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {mockRecentJobs.map(job => (
-              <JobCard 
-                key={job.id}
-                {...job}
-                onView={handleViewJob}
-              />
-            ))}
+            {recentJobs.length > 0 ? (
+              recentJobs.map(job => (
+                <JobCard 
+                  key={job.id}
+                  {...job}
+                  onView={handleViewJob}
+                />
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No jobs yet</p>
+                <Button onClick={handleCreateJob} variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Your First Job
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Deadline Alerts */}
         <DeadlineAlerts 
-          items={mockDeadlineItems}
+          items={alerts}
           onView={handleViewDeadlineItem}
         />
       </div>
+
+      {/* Create Job Modal */}
+      <Modal
+        isOpen={isCreateJobModalOpen}
+        onClose={() => setIsCreateJobModalOpen(false)}
+        title="Create New Job"
+      >
+        <CreateJobForm 
+          onSuccess={handleCreateJobSuccess}
+          onCancel={() => setIsCreateJobModalOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }

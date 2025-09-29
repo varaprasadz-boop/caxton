@@ -1,74 +1,47 @@
 import { useState } from "react";
 import EmployeeCard from "@/components/EmployeeCard";
+import CreateEmployeeForm from "@/components/CreateEmployeeForm";
+import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { Employee } from "@shared/schema";
 
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [isCreateEmployeeModalOpen, setIsCreateEmployeeModalOpen] = useState(false);
 
-  // TODO: Remove mock data when implementing real functionality
-  const mockEmployees = [
-    {
-      id: "1", 
-      name: "Sarah Design",
-      role: "Designer",
-      email: "sarah@caxton.com",
-      phone: "+1 555-0111",
-      activeTasks: 2,
-      completedTasks: 15
-    },
-    {
-      id: "2",
-      name: "Mike Printer",
-      role: "Printer", 
-      email: "mike@caxton.com",
-      phone: "+1 555-0222",
-      activeTasks: 4,
-      completedTasks: 28
-    },
-    {
-      id: "3",
-      name: "Anna QC",
-      role: "QC",
-      email: "anna@caxton.com",
-      phone: "+1 555-0333",
-      activeTasks: 1,
-      completedTasks: 22
-    },
-    {
-      id: "4",
-      name: "David Bind",
-      role: "Binder",
-      email: "david@caxton.com",
-      phone: "+1 555-0444", 
-      activeTasks: 3,
-      completedTasks: 18
-    },
-    {
-      id: "5",
-      name: "Lisa Pack",
-      role: "Packaging",
-      email: "lisa@caxton.com",
-      phone: "+1 555-0555",
-      activeTasks: 2,
-      completedTasks: 25
-    },
-    {
-      id: "6", 
-      name: "Tom Deliver",
-      role: "Logistics",
-      email: "tom@caxton.com",
-      phone: "+1 555-0666",
-      activeTasks: 1,
-      completedTasks: 31
-    }
-  ];
+  // Fetch real data
+  const { data: employees = [] } = useQuery<Employee[]>({
+    queryKey: ["/api/employees"]
+  });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["/api/tasks"]
+  });
+
+  // Calculate task stats for each employee
+  const employeesWithStats = employees.map(employee => {
+    const employeeTasks = tasks.filter((task: any) => task.employeeId === employee.id);
+    const activeTasks = employeeTasks.filter((task: any) => task.status !== "completed").length;
+    const completedTasks = employeeTasks.filter((task: any) => task.status === "completed").length;
+    
+    return {
+      ...employee,
+      activeTasks,
+      completedTasks
+    };
+  });
 
   const handleCreateEmployee = () => {
-    console.log('Creating new employee');
+    setIsCreateEmployeeModalOpen(true);
+  };
+
+  const handleCreateEmployeeSuccess = () => {
+    setIsCreateEmployeeModalOpen(false);
   };
 
   const handleViewEmployee = (id: string) => {
@@ -89,7 +62,7 @@ export default function Employees() {
     console.log('Filtering by role:', value);
   };
 
-  const filteredEmployees = mockEmployees.filter(employee => {
+  const filteredEmployees = employeesWithStats.filter(employee => {
     const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          employee.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          employee.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -171,7 +144,7 @@ export default function Employees() {
         </div>
       )}
 
-      {mockEmployees.length === 0 && (
+      {employees.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">No employees yet</p>
           <Button onClick={handleCreateEmployee} data-testid="button-create-first-employee">
@@ -180,6 +153,18 @@ export default function Employees() {
           </Button>
         </div>
       )}
+
+      {/* Create Employee Modal */}
+      <Modal
+        isOpen={isCreateEmployeeModalOpen}
+        onClose={() => setIsCreateEmployeeModalOpen(false)}
+        title="Add New Employee"
+      >
+        <CreateEmployeeForm 
+          onSuccess={handleCreateEmployeeSuccess}
+          onCancel={() => setIsCreateEmployeeModalOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }
