@@ -11,6 +11,8 @@ export const clients = pgTable("clients", {
   email: text("email").notNull(),
   phone: text("phone").notNull(),
   address: text("address"),
+  gstNo: text("gst_no"),
+  paymentMethod: text("payment_method").notNull().default("Cash"), // Cash, Online
 });
 
 // Employees table

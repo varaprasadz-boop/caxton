@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -21,7 +22,9 @@ export default function CreateClientForm({ onSuccess, onCancel }: CreateClientFo
     company: "",
     email: "",
     phone: "",
-    address: ""
+    address: "",
+    gstNo: "",
+    paymentMethod: "Cash"
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -74,6 +77,13 @@ export default function CreateClientForm({ onSuccess, onCancel }: CreateClientFo
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const handleSelectChange = (field: keyof InsertClient) => (value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
@@ -163,6 +173,41 @@ export default function CreateClientForm({ onSuccess, onCancel }: CreateClientFo
             {errors.address && (
               <p className="text-sm text-destructive">{errors.address}</p>
             )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="gstNo">GST No</Label>
+              <Input
+                id="gstNo"
+                value={formData.gstNo || ""}
+                onChange={handleChange("gstNo")}
+                placeholder="27XXXXX1234X1X1"
+                data-testid="input-client-gst-no"
+              />
+              {errors.gstNo && (
+                <p className="text-sm text-destructive">{errors.gstNo}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="paymentMethod">Payment Method *</Label>
+              <Select
+                value={formData.paymentMethod}
+                onValueChange={handleSelectChange("paymentMethod")}
+              >
+                <SelectTrigger data-testid="select-payment-method">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash" data-testid="select-payment-cash">Cash</SelectItem>
+                  <SelectItem value="Online" data-testid="select-payment-online">Online</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.paymentMethod && (
+                <p className="text-sm text-destructive">{errors.paymentMethod}</p>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2 pt-4">
