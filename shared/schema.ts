@@ -65,7 +65,7 @@ export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: tru
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true }).extend({
   status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional(),
   stageDeadlines: stageDeadlinesSchema.optional(),
-  poFileUrl: z.string().url().optional()
+  poFileUrl: z.string().min(1).optional() // Allow relative URLs for local file storage
 });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true }).extend({
   status: z.enum(["pending", "in-progress", "completed", "delayed"]).optional(),

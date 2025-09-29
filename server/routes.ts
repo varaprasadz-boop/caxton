@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { uploadMiddleware, handleFileUpload } from "./upload";
+import fs from 'fs';
+import path from 'path';
+import { Client } from '@replit/object-storage';
 import { 
   insertClientSchema, 
   insertEmployeeSchema, 
@@ -18,20 +21,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // File upload route
   app.post("/api/upload", uploadMiddleware, handleFileUpload);
 
-  // File serving route for PO files
-  app.get("/files/:filename", (req, res) => {
+  // File serving route for PO files (local fallback) - SECURE
+  app.get("/files/:filename", async (req, res) => {
     try {
-      const { filename } = req.params;
-      const privateDir = process.env.PRIVATE_OBJECT_DIR;
+      // Get and decode the filename parameter to handle URL encoding
+      let filename = decodeURIComponent(req.params.filename);
       
-      if (!privateDir) {
-        return res.status(500).json({ error: 'Object storage not configured' });
+      // Security: Reject any filename containing directory traversal patterns
+      // Check both before and after decoding to prevent encoding-based bypasses
+      const originalFilename = req.params.filename;
+      if (!filename || !originalFilename ||
+          filename.includes('..') || filename.includes('/') || filename.includes('\\') ||
+          originalFilename.includes('..') || originalFilename.includes('%2e%2e') || 
+          originalFilename.includes('%2f') || originalFilename.includes('%5c')) {
+        return res.status(400).json({ error: 'Invalid filename: directory traversal not allowed' });
       }
       
-      const filePath = `${privateDir}/${filename}`;
-      res.sendFile(filePath, { root: '/' });
+      // Security: Only allow safe filename characters (alphanumeric, hyphens, underscores, dots)
+      if (!/^[a-zA-Z0-9\-_.]+$/.test(filename)) {
+        return res.status(400).json({ error: 'Invalid filename format: only alphanumeric, dash, underscore, and dot allowed' });
+      }
+      
+      // Security: Prevent excessively long filenames that could cause issues
+      if (filename.length > 255) {
+        return res.status(400).json({ error: 'Filename too long' });
+      }
+      
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      const filePath = path.join(uploadsDir, filename);
+      
+      // Security: Double-check the resolved path is within uploads directory
+      // Try object storage first, then fall back to local storage
+      let fileServed = false;
+      
+      // Try object storage
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (bucketId) {
+        try {
+          const objectStorage = new Client();
+          const objectPath = `.private/${filename}`;
+          const fileBuffer = await objectStorage.downloadAsBytes(objectPath);
+          
+          // Set appropriate content type based on file extension
+          const ext = filename.split('.').pop()?.toLowerCase();
+          const contentType = ext === 'pdf' ? 'application/pdf' 
+                            : ext === 'png' ? 'image/png'
+                            : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+                            : 'application/octet-stream';
+          
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+          res.send(fileBuffer);
+          fileServed = true;
+          console.log(`File served from object storage: ${filename}`);
+        } catch (objectStorageError) {
+          console.warn(`Object storage failed for ${filename}, trying local storage:`, objectStorageError.message);
+        }
+      }
+      
+      // Fall back to local storage if object storage failed or unavailable
+      if (!fileServed) {
+        const realUploadPath = fs.realpathSync(uploadsDir);
+        let realFilePath;
+        try {
+          realFilePath = fs.realpathSync(filePath);
+        } catch (e) {
+          // File doesn't exist or path resolution failed
+          return res.status(404).json({ error: 'File not found' });
+        }
+        
+        if (!realFilePath.startsWith(realUploadPath + path.sep) && realFilePath !== realUploadPath) {
+          return res.status(403).json({ error: 'Access denied: path outside allowed directory' });
+        }
+        
+        // Check if file exists and is a regular file
+        const stats = fs.statSync(realFilePath);
+        if (!stats.isFile()) {
+          return res.status(400).json({ error: 'Invalid file type' });
+        }
+        
+        // Set appropriate content type based on file extension
+        const ext = filename.split('.').pop()?.toLowerCase();
+        const contentType = ext === 'pdf' ? 'application/pdf' 
+                          : ext === 'png' ? 'image/png'
+                          : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+                          : 'application/octet-stream';
+        
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        res.sendFile(realFilePath);
+        console.log(`File served from local storage: ${filename}`);
+      }
+      
     } catch (error) {
-      res.status(404).json({ error: 'File not found' });
+      console.error('File serving error:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

@@ -19,6 +19,13 @@ interface CreateJobFormProps {
 }
 
 export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProps) {
+  // Initialize with a valid future date (tomorrow)
+  const getDefaultDeadline = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  };
+
   const [formData, setFormData] = useState<InsertJob>({
     clientId: "",
     jobType: "",
@@ -27,7 +34,7 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     size: "",
     colors: "",
     finishingOptions: "",
-    deadline: new Date(),
+    deadline: getDefaultDeadline(),
     status: "pending",
     stageDeadlines: {}
   });
@@ -62,19 +69,47 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
 
   const createJobMutation = useMutation({
     mutationFn: async (data: InsertJob) => {
-      const res = await apiRequest("POST", "/api/jobs", {
+      let poFileUrl: string | undefined = undefined;
+      
+      // Upload PO file first if provided
+      if (poFile) {
+        setUploadingPO(true);
+        try {
+          poFileUrl = await uploadPOFile(poFile);
+        } catch (error) {
+          setUploadingPO(false);
+          throw new Error('Failed to upload PO file: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+        setUploadingPO(false);
+      }
+      
+      // Create the payload, only including poFileUrl if it has a value
+      const payload: any = {
         ...data,
-        deadline: data.deadline.toISOString()
-      });
+        deadline: data.deadline.toISOString(),
+      };
+      
+      if (poFileUrl) {
+        payload.poFileUrl = poFileUrl;
+      }
+      
+      const res = await apiRequest("POST", "/api/jobs", payload);
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats/jobs"] });
+      
+      // Clear form state including PO file
+      setPOFile(null);
+      setUploadingPO(false);
+      
       toast({
         title: "Job created",
-        description: "New printing job has been created with automated workflow tasks.",
+        description: poFile 
+          ? "New printing job has been created with PO file and automated workflow tasks."
+          : "New printing job has been created with automated workflow tasks.",
       });
       onSuccess?.();
     },
@@ -170,8 +205,14 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     setErrors(prev => ({ ...prev, poFile: '' }));
   };
 
-  // Format date for input
+  // Format date for input with validation
   const formatDateForInput = (date: Date) => {
+    if (!date || isNaN(date.getTime())) {
+      // Return tomorrow's date if invalid date provided
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow.toISOString().split('T')[0];
+    }
     return date.toISOString().split('T')[0];
   };
 
