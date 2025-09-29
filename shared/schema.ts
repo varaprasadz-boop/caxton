@@ -35,7 +35,8 @@ export const jobs = pgTable("jobs", {
   colors: text("colors"),
   finishingOptions: text("finishing_options"),
   deadline: timestamp("deadline").notNull(),
-  stageTimeAllocations: json("stage_time_allocations"), // JSON object with stage names and hours allocated
+  stageDeadlines: json("stage_deadlines"), // JSON object with stage names and deadline dates
+  poFileUrl: text("po_file_url"), // URL to uploaded PO file in object storage
   status: text("status").notNull().default("pending"), // pending, pre-press, printing, cutting, folding, binding, qc, packaging, dispatch, delivered, completed
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -47,25 +48,28 @@ export const tasks = pgTable("tasks", {
   employeeId: varchar("employee_id"),
   stage: text("stage").notNull(), // Pre-Press, Printing, Cutting, Folding, Binding, QC, Packaging, Dispatch
   deadline: timestamp("deadline").notNull(),
-  status: text("status").notNull().default("pending"), // pending, in-progress, completed
+  status: text("status").notNull().default("pending"), // pending, in-progress, completed, delayed
+  delayComment: text("delay_comment"), // Comment when task is marked as delayed
   remarks: text("remarks"),
   order: integer("order").notNull(), // Task order in workflow
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });
 
-// Stage time allocation schema
-export const stageTimeAllocationsSchema = z.record(z.string(), z.number().min(0.1).max(168)); // hours per stage, max 1 week
+// Stage deadline allocation schema
+export const stageDeadlinesSchema = z.record(z.string(), z.string().datetime()); // stage name -> ISO date string
 
 // Insert schemas
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true }).extend({
   status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional(),
-  stageTimeAllocations: stageTimeAllocationsSchema.optional()
+  stageDeadlines: stageDeadlinesSchema.optional(),
+  poFileUrl: z.string().url().optional()
 });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true }).extend({
-  status: z.enum(["pending", "in-progress", "completed"]).optional()
+  status: z.enum(["pending", "in-progress", "completed", "delayed"]).optional(),
+  delayComment: z.string().optional()
 });
 
 // Types
@@ -90,16 +94,16 @@ export type EmployeeRole = typeof EMPLOYEE_ROLES[number];
 export const TASK_STAGES = ["Pre-Press", "Printing", "Cutting", "Folding", "Binding", "QC", "Packaging", "Dispatch"] as const;
 export type TaskStage = typeof TASK_STAGES[number];
 
-// Stage time allocation type
-export type StageTimeAllocations = {
-  [stageName: string]: number; // Stage name -> hours allocated
+// Stage deadline allocation type
+export type StageDeadlines = {
+  [stageName: string]: string; // Stage name -> ISO date string
 };
 
 // Status enums
 export const JOB_STATUSES = ["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"] as const;
 export type JobStatus = typeof JOB_STATUSES[number];
 
-export const TASK_STATUSES = ["pending", "in-progress", "completed"] as const;
+export const TASK_STATUSES = ["pending", "in-progress", "completed", "delayed"] as const;
 export type TaskStatus = typeof TASK_STATUSES[number];
 
 // Helper function to get workflow stages for a job type
@@ -116,26 +120,25 @@ export function getWorkflowStages(jobType: string): TaskStage[] {
   }
 }
 
-// Helper function to get default stage time allocations (in hours)
-export function getDefaultStageTimeAllocations(jobType: string): StageTimeAllocations {
-  const stages = getWorkflowStages(jobType);
-  const defaultAllocations: StageTimeAllocations = {};
+// Updated function to get all workflow stages (for the new requirement that all job types have all stages)
+export function getAllWorkflowStages(): TaskStage[] {
+  return ["Pre-Press", "Printing", "Cutting", "Folding", "Binding", "QC", "Packaging", "Dispatch"];
+}
+
+// Helper function to get default stage deadlines (evenly spaced between now and delivery deadline)
+export function getDefaultStageDeadlines(jobType: string, deliveryDeadline: Date): StageDeadlines {
+  const stages = getAllWorkflowStages(); // Now all jobs get all stages
+  const defaultDeadlines: StageDeadlines = {};
   
-  // Default time allocations in hours
-  const defaults: Record<TaskStage, number> = {
-    "Pre-Press": 4,
-    "Printing": 8,
-    "Cutting": 2,
-    "Folding": 3,
-    "Binding": 4,
-    "QC": 2,
-    "Packaging": 3,
-    "Dispatch": 1
-  };
+  const now = new Date();
+  const totalDays = Math.max(1, Math.ceil((deliveryDeadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  const daysBetweenStages = Math.max(1, Math.floor(totalDays / stages.length));
   
-  stages.forEach(stage => {
-    defaultAllocations[stage] = defaults[stage];
+  stages.forEach((stage, index) => {
+    const stageDeadline = new Date(now);
+    stageDeadline.setDate(now.getDate() + (index + 1) * daysBetweenStages);
+    defaultDeadlines[stage] = stageDeadline.toISOString();
   });
   
-  return defaultAllocations;
+  return defaultDeadlines;
 }
