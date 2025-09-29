@@ -163,7 +163,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/jobs", async (req, res) => {
     try {
-      const validatedData = insertJobSchema.parse(req.body);
+      // Handle date string conversion for API compatibility
+      const requestData = { ...req.body };
+      if (requestData.deadline && typeof requestData.deadline === 'string') {
+        requestData.deadline = new Date(requestData.deadline);
+      }
+      
+      const validatedData = insertJobSchema.parse(requestData);
       const job = await storage.createJob(validatedData);
       
       // Auto-generate workflow tasks based on job type
