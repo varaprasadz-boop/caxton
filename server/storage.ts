@@ -18,11 +18,15 @@ export interface IStorage {
   getClient(id: string): Promise<Client | undefined>;
   getClients(): Promise<Client[]>;
   createClient(client: InsertClient): Promise<Client>;
+  updateClient(id: string, updates: Partial<InsertClient>): Promise<Client | undefined>;
+  deleteClient(id: string): Promise<boolean>;
   
   // Employees
   getEmployee(id: string): Promise<Employee | undefined>;
   getEmployees(): Promise<Employee[]>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
+  updateEmployee(id: string, updates: Partial<InsertEmployee>): Promise<Employee | undefined>;
+  deleteEmployee(id: string): Promise<boolean>;
   
   // Jobs
   getJob(id: string): Promise<Job | undefined>;
@@ -70,6 +74,23 @@ export class MemStorage implements IStorage {
     return client;
   }
 
+  async updateClient(id: string, updates: Partial<InsertClient>): Promise<Client | undefined> {
+    const client = this.clients.get(id);
+    if (!client) return undefined;
+    
+    const updatedClient: Client = { 
+      ...client, 
+      ...updates,
+      address: updates.address !== undefined ? updates.address : client.address
+    };
+    this.clients.set(id, updatedClient);
+    return updatedClient;
+  }
+
+  async deleteClient(id: string): Promise<boolean> {
+    return this.clients.delete(id);
+  }
+
   // Employees
   async getEmployee(id: string): Promise<Employee | undefined> {
     return this.employees.get(id);
@@ -88,6 +109,23 @@ export class MemStorage implements IStorage {
     };
     this.employees.set(id, employee);
     return employee;
+  }
+
+  async updateEmployee(id: string, updates: Partial<InsertEmployee>): Promise<Employee | undefined> {
+    const employee = this.employees.get(id);
+    if (!employee) return undefined;
+    
+    const updatedEmployee: Employee = { 
+      ...employee, 
+      ...updates,
+      phone: updates.phone !== undefined ? updates.phone : employee.phone
+    };
+    this.employees.set(id, updatedEmployee);
+    return updatedEmployee;
+  }
+
+  async deleteEmployee(id: string): Promise<boolean> {
+    return this.employees.delete(id);
   }
 
   // Jobs
