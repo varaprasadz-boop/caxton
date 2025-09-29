@@ -6,9 +6,15 @@ import {
   type Job,
   type InsertJob,
   type Task,
-  type InsertTask
+  type InsertTask,
+  clients,
+  employees,
+  jobs,
+  tasks
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -216,4 +222,105 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// PostgreSQL Storage Implementation
+export class PostgreSQLStorage implements IStorage {
+  // Clients
+  async getClient(id: string): Promise<Client | undefined> {
+    const result = await db.select().from(clients).where(eq(clients.id, id));
+    return result[0] || undefined;
+  }
+
+  async getClients(): Promise<Client[]> {
+    return await db.select().from(clients);
+  }
+
+  async createClient(insertClient: InsertClient): Promise<Client> {
+    const result = await db.insert(clients).values(insertClient).returning();
+    return result[0];
+  }
+
+  async updateClient(id: string, updates: Partial<InsertClient>): Promise<Client | undefined> {
+    const result = await db.update(clients).set(updates).where(eq(clients.id, id)).returning();
+    return result[0] || undefined;
+  }
+
+  async deleteClient(id: string): Promise<boolean> {
+    const result = await db.delete(clients).where(eq(clients.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Employees
+  async getEmployee(id: string): Promise<Employee | undefined> {
+    const result = await db.select().from(employees).where(eq(employees.id, id));
+    return result[0] || undefined;
+  }
+
+  async getEmployees(): Promise<Employee[]> {
+    return await db.select().from(employees);
+  }
+
+  async createEmployee(insertEmployee: InsertEmployee): Promise<Employee> {
+    const result = await db.insert(employees).values(insertEmployee).returning();
+    return result[0];
+  }
+
+  async updateEmployee(id: string, updates: Partial<InsertEmployee>): Promise<Employee | undefined> {
+    const result = await db.update(employees).set(updates).where(eq(employees.id, id)).returning();
+    return result[0] || undefined;
+  }
+
+  async deleteEmployee(id: string): Promise<boolean> {
+    const result = await db.delete(employees).where(eq(employees.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Jobs
+  async getJob(id: string): Promise<Job | undefined> {
+    const result = await db.select().from(jobs).where(eq(jobs.id, id));
+    return result[0] || undefined;
+  }
+
+  async getJobs(): Promise<Job[]> {
+    return await db.select().from(jobs);
+  }
+
+  async createJob(insertJob: InsertJob): Promise<Job> {
+    const result = await db.insert(jobs).values(insertJob).returning();
+    return result[0];
+  }
+
+  async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
+    const result = await db.update(jobs).set(updates).where(eq(jobs.id, id)).returning();
+    return result[0] || undefined;
+  }
+
+  // Tasks
+  async getTask(id: string): Promise<Task | undefined> {
+    const result = await db.select().from(tasks).where(eq(tasks.id, id));
+    return result[0] || undefined;
+  }
+
+  async getTasks(): Promise<Task[]> {
+    return await db.select().from(tasks);
+  }
+
+  async getTasksByJobId(jobId: string): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.jobId, jobId));
+  }
+
+  async createTask(task: InsertTask): Promise<Task> {
+    const result = await db.insert(tasks).values(task).returning();
+    return result[0];
+  }
+
+  async updateTask(id: string, updates: Partial<Pick<Task, 'status' | 'employeeId' | 'remarks'>>): Promise<Task | undefined> {
+    const result = await db.update(tasks).set({
+      ...updates,
+      updatedAt: new Date()
+    }).where(eq(tasks.id, id)).returning();
+    return result[0] || undefined;
+  }
+}
+
+// Use PostgreSQL storage in production/development, MemStorage for testing
+export const storage = process.env.NODE_ENV === 'test' ? new MemStorage() : new PostgreSQLStorage();

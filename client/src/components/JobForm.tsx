@@ -8,9 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertJobSchema, type InsertJob, type Job, type Client, JOB_TYPES } from "@shared/schema";
+import { insertJobSchema, type InsertJob, type Job, type Client, JOB_TYPES, type StageTimeAllocations, getDefaultStageTimeAllocations } from "@shared/schema";
 import { z } from "zod";
 import { Calendar, User } from "lucide-react";
+import StageTimeAllocation from "./StageTimeAllocation";
 
 interface JobFormProps {
   job?: Job; // If provided, we're editing; otherwise, we're creating
@@ -29,6 +30,7 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
     colors: job?.colors || "",
     finishingOptions: job?.finishingOptions || "",
     deadline: job?.deadline ? new Date(job.deadline) : new Date(),
+    stageTimeAllocations: job?.stageTimeAllocations || {},
     status: (job?.status as any) || "pending"
   });
 
@@ -135,6 +137,18 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
   };
+
+  const handleStageTimeAllocationsChange = (allocations: StageTimeAllocations) => {
+    setFormData(prev => ({ ...prev, stageTimeAllocations: allocations }));
+  };
+
+  // Auto-populate default stage allocations when job type changes (for new jobs only)
+  useEffect(() => {
+    if (!isEditing && formData.jobType && Object.keys(formData.stageTimeAllocations || {}).length === 0) {
+      const defaultAllocations = getDefaultStageTimeAllocations(formData.jobType);
+      setFormData(prev => ({ ...prev, stageTimeAllocations: defaultAllocations }));
+    }
+  }, [formData.jobType, isEditing, formData.stageTimeAllocations]);
 
   const formatDateForInput = (date: Date) => {
     return date.toISOString().split('T')[0];
@@ -301,6 +315,16 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
               )}
             </div>
           </div>
+
+          {/* Stage Time Allocation */}
+          {!isEditing && (
+            <StageTimeAllocation
+              jobType={formData.jobType}
+              allocations={formData.stageTimeAllocations || {}}
+              deadline={formData.deadline}
+              onAllocationsChange={handleStageTimeAllocationsChange}
+            />
+          )}
 
           <div className="flex gap-2 pt-4">
             <Button

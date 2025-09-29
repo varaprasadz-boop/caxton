@@ -8,9 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertJobSchema, type InsertJob, type Client, JOB_TYPES } from "@shared/schema";
+import { insertJobSchema, type InsertJob, type Client, JOB_TYPES, type StageTimeAllocations } from "@shared/schema";
 import { z } from "zod";
 import { Calendar, User } from "lucide-react";
+import StageTimeAllocation from "@/components/StageTimeAllocation";
 
 interface CreateJobFormProps {
   onSuccess?: () => void;
@@ -27,7 +28,8 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     colors: "",
     finishingOptions: "",
     deadline: new Date(),
-    status: "pending"
+    status: "pending",
+    stageTimeAllocations: {}
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -106,10 +108,21 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
   };
 
   const handleSelectChange = (field: keyof InsertJob) => (value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    const updates: Partial<InsertJob> = { [field]: value };
+    
+    // Reset stage time allocations when job type changes
+    if (field === 'jobType') {
+      updates.stageTimeAllocations = {};
+    }
+    
+    setFormData(prev => ({ ...prev, ...updates }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
+  };
+
+  const handleStageTimeAllocationsChange = (allocations: StageTimeAllocations) => {
+    setFormData(prev => ({ ...prev, stageTimeAllocations: allocations }));
   };
 
   // Format date for input
@@ -272,6 +285,16 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
               )}
             </div>
           </div>
+
+          {/* Stage Time Allocation */}
+          {formData.jobType && (
+            <StageTimeAllocation
+              jobType={formData.jobType}
+              allocations={formData.stageTimeAllocations || {}}
+              deadline={formData.deadline}
+              onAllocationsChange={handleStageTimeAllocationsChange}
+            />
+          )}
 
           <div className="flex gap-2 pt-4">
             <Button

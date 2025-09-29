@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -35,6 +35,7 @@ export const jobs = pgTable("jobs", {
   colors: text("colors"),
   finishingOptions: text("finishing_options"),
   deadline: timestamp("deadline").notNull(),
+  stageTimeAllocations: json("stage_time_allocations"), // JSON object with stage names and hours allocated
   status: text("status").notNull().default("pending"), // pending, pre-press, printing, cutting, folding, binding, qc, packaging, dispatch, delivered, completed
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -53,11 +54,15 @@ export const tasks = pgTable("tasks", {
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });
 
+// Stage time allocation schema
+export const stageTimeAllocationsSchema = z.record(z.string(), z.number().min(0.1).max(168)); // hours per stage, max 1 week
+
 // Insert schemas
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true }).extend({
-  status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional()
+  status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional(),
+  stageTimeAllocations: stageTimeAllocationsSchema.optional()
 });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true }).extend({
   status: z.enum(["pending", "in-progress", "completed"]).optional()
@@ -85,9 +90,52 @@ export type EmployeeRole = typeof EMPLOYEE_ROLES[number];
 export const TASK_STAGES = ["Pre-Press", "Printing", "Cutting", "Folding", "Binding", "QC", "Packaging", "Dispatch"] as const;
 export type TaskStage = typeof TASK_STAGES[number];
 
+// Stage time allocation type
+export type StageTimeAllocations = {
+  [stageName: string]: number; // Stage name -> hours allocated
+};
+
 // Status enums
 export const JOB_STATUSES = ["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"] as const;
 export type JobStatus = typeof JOB_STATUSES[number];
 
 export const TASK_STATUSES = ["pending", "in-progress", "completed"] as const;
 export type TaskStatus = typeof TASK_STATUSES[number];
+
+// Helper function to get workflow stages for a job type
+export function getWorkflowStages(jobType: string): TaskStage[] {
+  const baseStages: TaskStage[] = ["Pre-Press", "Printing", "QC", "Packaging", "Dispatch"];
+  
+  // Add job-specific stages
+  if (["Booklet", "Brochures"].includes(jobType)) {
+    return ["Pre-Press", "Printing", "Cutting", "Folding", "Binding", "QC", "Packaging", "Dispatch"];
+  } else if (["Carton", "Pouch Folder"].includes(jobType)) {
+    return ["Pre-Press", "Printing", "Cutting", "Folding", "QC", "Packaging", "Dispatch"];
+  } else {
+    return ["Pre-Press", "Printing", "Cutting", "QC", "Packaging", "Dispatch"];
+  }
+}
+
+// Helper function to get default stage time allocations (in hours)
+export function getDefaultStageTimeAllocations(jobType: string): StageTimeAllocations {
+  const stages = getWorkflowStages(jobType);
+  const defaultAllocations: StageTimeAllocations = {};
+  
+  // Default time allocations in hours
+  const defaults: Record<TaskStage, number> = {
+    "Pre-Press": 4,
+    "Printing": 8,
+    "Cutting": 2,
+    "Folding": 3,
+    "Binding": 4,
+    "QC": 2,
+    "Packaging": 3,
+    "Dispatch": 1
+  };
+  
+  stages.forEach(stage => {
+    defaultAllocations[stage] = defaults[stage];
+  });
+  
+  return defaultAllocations;
+}

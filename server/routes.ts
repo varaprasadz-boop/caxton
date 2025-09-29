@@ -8,7 +8,8 @@ import {
   insertTaskSchema,
   JOB_TYPES,
   EMPLOYEE_ROLES,
-  TASK_STAGES
+  TASK_STAGES,
+  getWorkflowStages
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -172,8 +173,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertJobSchema.parse(requestData);
       const job = await storage.createJob(validatedData);
       
-      // Auto-generate workflow tasks based on job type
-      await generateJobTasks(job.id, job.jobType, job.deadline);
+      // Auto-generate workflow tasks based on job type and stage time allocations
+      await generateJobTasks(job.id, job.jobType, job.deadline, job.stageTimeAllocations);
       
       res.status(201).json(job);
     } catch (error) {
@@ -501,18 +502,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Utility function to generate workflow tasks
-  async function generateJobTasks(jobId: string, jobType: string, deadline: Date) {
-    const workflowStages = getWorkflowStages(jobType);
+  async function generateJobTasks(jobId: string, jobType: string, deadline: Date, stageTimeAllocations?: any) {
+    const workflowStages = getWorkflowStages(jobType); // Now returns plain strings
     const deliveryDate = new Date(deadline);
     
     for (let i = 0; i < workflowStages.length; i++) {
-      const stage = workflowStages[i];
-      const daysBeforeDelivery = workflowStages.length - i;
-      const taskDeadline = new Date(deliveryDate.getTime() - daysBeforeDelivery * 24 * 60 * 60 * 1000);
+      const stage = workflowStages[i]; // Now a plain string
+      let taskDeadline: Date;
+      
+      if (stageTimeAllocations && Object.keys(stageTimeAllocations).length > 0) {
+        // Use custom stage time allocations if provided
+        const totalHoursBeforeThisStage = workflowStages
+          .slice(0, i)
+          .reduce((sum, s) => sum + (stageTimeAllocations[s] || 0), 0);
+        
+        const totalHours = workflowStages
+          .reduce((sum, s) => sum + (stageTimeAllocations[s] || 0), 0);
+        
+        const hoursFromDeadline = totalHours - totalHoursBeforeThisStage;
+        taskDeadline = new Date(deliveryDate.getTime() - hoursFromDeadline * 60 * 60 * 1000);
+      } else {
+        // Fallback to default 1-day-per-stage logic
+        const daysBeforeDelivery = workflowStages.length - i;
+        taskDeadline = new Date(deliveryDate.getTime() - daysBeforeDelivery * 24 * 60 * 60 * 1000);
+      }
       
       await storage.createTask({
         jobId,
-        stage: stage.name,
+        stage: stage, // Now using plain string
         deadline: taskDeadline,
         status: "pending",
         order: i + 1,
@@ -522,26 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  function getWorkflowStages(jobType: string) {
-    const baseStages = [
-      { name: "Pre-Press" },
-      { name: "Printing" },
-      { name: "QC" },
-      { name: "Packaging" },
-      { name: "Dispatch" }
-    ];
-    
-    // Add job-specific stages
-    if (["Booklet", "Brochures"].includes(jobType)) {
-      baseStages.splice(2, 0, { name: "Cutting" }, { name: "Folding" }, { name: "Binding" });
-    } else if (["Carton", "Pouch Folder"].includes(jobType)) {
-      baseStages.splice(2, 0, { name: "Cutting" }, { name: "Folding" });
-    } else {
-      baseStages.splice(2, 0, { name: "Cutting" });
-    }
-    
-    return baseStages;
-  }
+  // Removed duplicate getWorkflowStages function - now using the one from shared/schema
 
   const httpServer = createServer(app);
   return httpServer;
