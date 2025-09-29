@@ -1,65 +1,57 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import JobCard from "@/components/JobCard";
+import CreateJobForm from "@/components/CreateJobForm";
+import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Filter } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { Job, Client } from "@shared/schema";
+import { format } from "date-fns";
 
 export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
-  // TODO: Remove mock data when implementing real functionality
-  const mockJobs = [
-    {
-      id: "1",
-      title: "Business Card Print Run",
-      client: "TechCorp Solutions",
-      jobType: "Business Cards",
-      quantity: 1000,
-      deadline: new Date("2024-01-15"),
-      status: "printing",
-      description: "Premium business cards with matte finish and embossed logo"
-    },
-    {
-      id: "2",
-      title: "Marketing Brochure",
-      client: "Green Earth Co", 
-      jobType: "Brochures",
-      quantity: 500,
-      deadline: new Date("2023-12-20"),
-      status: "overdue",
-      description: "Tri-fold brochures for environmental awareness campaign"
-    },
-    {
-      id: "3",
-      title: "Product Catalog",
-      client: "Fashion Store",
-      jobType: "Booklet",
-      quantity: 200,
-      deadline: new Date("2024-01-25"),
-      status: "pre-press",
-      description: "48-page product catalog with high-quality photography"
-    },
-    {
-      id: "4",
-      title: "Event Flyers",
-      client: "Local Events Co",
-      jobType: "Flyers",
-      quantity: 2000,
-      deadline: new Date("2024-01-10"),
-      status: "completed",
-      description: "A5 flyers for upcoming community events"
-    }
-  ];
+  // Fetch real data
+  const { data: jobs = [] } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"]
+  });
+
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"]
+  });
+
+  // Create client lookup map
+  const clientMap = new Map(clients.map(c => [c.id, c]));
+
+  // Transform jobs for JobCard component
+  const transformedJobs = jobs.map(job => ({
+    id: job.id,
+    title: job.description || job.jobType,
+    client: clientMap.get(job.clientId)?.name || "Unknown Client",
+    jobType: job.jobType,
+    quantity: job.quantity,
+    deadline: new Date(job.deadline),
+    status: job.status,
+    description: job.description || undefined // Convert null to undefined for JobCard compatibility
+  }));
 
   const handleCreateJob = () => {
-    console.log('Creating new job');
+    setIsCreateJobModalOpen(true);
+  };
+
+  const handleCreateJobSuccess = () => {
+    setIsCreateJobModalOpen(false);
   };
 
   const handleViewJob = (id: string) => {
-    console.log('Viewing job:', id);
+    setLocation(`/jobs/${id}`);
   };
 
   const handleSearch = (value: string) => {
@@ -138,26 +130,51 @@ export default function Jobs() {
       </div>
 
       {/* Jobs Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {mockJobs.map(job => (
-          <JobCard
-            key={job.id}
-            {...job}
-            onView={handleViewJob}
-          />
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {mockJobs.length === 0 && (
+      {/* Job Grid */}
+      {transformedJobs.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">No jobs found matching your criteria</p>
+          <p className="text-muted-foreground mb-4">No jobs found</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            Create your first job to get started with the workflow management
+          </p>
           <Button onClick={handleCreateJob} data-testid="button-create-first-job">
             <Plus className="mr-2 h-4 w-4" />
             Create Your First Job
           </Button>
         </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {transformedJobs
+            .filter(job => {
+              const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                 job.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                 job.jobType.toLowerCase().includes(searchTerm.toLowerCase());
+              const matchesStatus = statusFilter === "all" || job.status === statusFilter;
+              const matchesType = typeFilter === "all" || job.jobType === typeFilter;
+              return matchesSearch && matchesStatus && matchesType;
+            })
+            .map(job => (
+              <JobCard
+                key={job.id}
+                {...job}
+                onView={handleViewJob}
+              />
+            ))
+          }
+        </div>
       )}
+
+      {/* Create Job Modal */}
+      <Modal
+        isOpen={isCreateJobModalOpen}
+        onClose={() => setIsCreateJobModalOpen(false)}
+        title="Create New Job"
+      >
+        <CreateJobForm
+          onSuccess={handleCreateJobSuccess}
+          onCancel={() => setIsCreateJobModalOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Jobs from "@/pages/Jobs";
+import JobDetail from "@/pages/JobDetail";
 import Tasks from "@/pages/Tasks";
 import Clients from "@/pages/Clients";
 import Employees from "@/pages/Employees";
@@ -18,6 +19,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/jobs" component={Jobs} />
+      <Route path="/jobs/:id" component={JobDetail} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/clients" component={Clients} />
       <Route path="/employees" component={Employees} />
