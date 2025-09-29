@@ -1,262 +1,217 @@
 import { useState } from "react";
-import TaskTimeline from "@/components/TaskTimeline";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import TaskCard from "@/components/TaskCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Filter, Kanban, List } from "lucide-react";
-import StatusBadge from "@/components/StatusBadge";
+import { Search, Filter } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { Task, Employee, Job, Client } from "@shared/schema";
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [stageFilter, setStageFilter] = useState("all");
-  const [view, setView] = useState<"list" | "kanban">("list");
+  const [employeeFilter, setEmployeeFilter] = useState("all");
 
-  // TODO: Remove mock data when implementing real functionality
-  const mockJobsWithTasks = [
-    {
-      jobId: "1",
-      jobTitle: "Business Card Print Run",
-      client: "TechCorp Solutions",
-      tasks: [
-        {
-          id: "1",
-          stage: "Pre-Press",
-          employeeName: "Sarah Design",
-          deadline: new Date("2024-01-10"),
-          status: "completed" as const,
-          order: 1
-        },
-        {
-          id: "2", 
-          stage: "Printing",
-          employeeName: "Mike Printer",
-          deadline: new Date("2024-01-12"),
-          status: "in-progress" as const,
-          order: 2
-        },
-        {
-          id: "3",
-          stage: "Cutting",
-          deadline: new Date("2024-01-13"),
-          status: "pending" as const,
-          order: 3
-        }
-      ]
-    },
-    {
-      jobId: "2",
-      jobTitle: "Marketing Brochure",
-      client: "Green Earth Co",
-      tasks: [
-        {
-          id: "4",
-          stage: "Pre-Press",
-          employeeName: "Sarah Design", 
-          deadline: new Date("2023-12-18"),
-          status: "completed" as const,
-          order: 1
-        },
-        {
-          id: "5",
-          stage: "Printing",
-          employeeName: "Mike Printer",
-          deadline: new Date("2023-12-20"),
-          status: "in-progress" as const,
-          order: 2
-        },
-        {
-          id: "6",
-          stage: "QC",
-          employeeName: "Anna QC",
-          deadline: new Date("2023-12-19"),
-          status: "pending" as const,
-          order: 3
-        }
-      ]
-    }
-  ];
+  // Fetch data
+  const { data: tasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"]
+  });
 
-  const allTasks = mockJobsWithTasks.flatMap(job => 
-    job.tasks.map(task => ({
+  const { data: employees = [] } = useQuery<Employee[]>({
+    queryKey: ["/api/employees"]
+  });
+
+  const { data: jobs = [] } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"]
+  });
+
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"]
+  });
+
+  // Create lookup maps
+  const employeeMap = new Map(employees.map(e => [e.id, e]));
+  const jobMap = new Map(jobs.map(j => [j.id, j]));
+  const clientMap = new Map(clients.map(c => [c.id, c]));
+
+  // Enhance tasks with additional info
+  const enhancedTasks = tasks.map(task => {
+    const job = jobMap.get(task.jobId);
+    const client = job ? clientMap.get(job.clientId) : null;
+    const assignedEmployee = task.employeeId ? employeeMap.get(task.employeeId) : null;
+
+    return {
       ...task,
-      jobTitle: job.jobTitle,
-      client: job.client
-    }))
+      jobTitle: job ? `${job.jobType} - ${client?.name || 'Unknown Client'}` : 'Unknown Job',
+      assignedEmployeeName: assignedEmployee?.name
+    };
+  });
+
+  // Filter tasks
+  const filteredTasks = enhancedTasks.filter(task => {
+    const matchesSearch = task.stage.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         task.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         task.assignedEmployeeName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+    const matchesStage = stageFilter === "all" || task.stage === stageFilter;
+    const matchesEmployee = employeeFilter === "all" || task.employeeId === employeeFilter;
+
+    return matchesSearch && matchesStatus && matchesStage && matchesEmployee;
+  });
+
+  // Separate tasks by status
+  const pendingTasks = filteredTasks.filter(task => task.status === "pending");
+  const inProgressTasks = filteredTasks.filter(task => task.status === "in-progress");
+  const completedTasks = filteredTasks.filter(task => task.status === "completed");
+
+  // Get overdue tasks
+  const overdueTasks = filteredTasks.filter(task => 
+    new Date(task.deadline) < new Date() && task.status !== "completed"
   );
 
-  const tasksByStage = allTasks.reduce((acc, task) => {
-    if (!acc[task.stage]) acc[task.stage] = [];
-    acc[task.stage].push(task);
-    return acc;
-  }, {} as Record<string, typeof allTasks>);
-
-  const handleAssignTask = (taskId: string) => {
-    console.log('Assigning task:', taskId);
-  };
-
-  const handleUpdateStatus = (taskId: string, status: string) => {
-    console.log('Updating task status:', taskId, status);
-  };
+  // Get unique stages for filter
+  const uniqueStages = Array.from(new Set(tasks.map(task => task.stage)));
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
-    console.log('Searching tasks:', value);
   };
 
-  const KanbanView = () => (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {Object.entries(tasksByStage).map(([stage, tasks]) => (
-        <Card key={stage} className="h-fit">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">{stage}</CardTitle>
-            <CardDescription className="text-xs">
-              {tasks.length} task{tasks.length !== 1 ? 's' : ''}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {tasks.map(task => {
-              const isOverdue = new Date() > task.deadline && task.status !== "completed";
-              return (
-                <Card key={task.id} className="p-3 hover-elevate" data-testid={`kanban-task-${task.id}`}>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium truncate">{task.jobTitle}</h4>
-                      <StatusBadge 
-                        status={isOverdue ? "overdue" : task.status}
-                        variant="task"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">{task.client}</p>
-                    {task.employeeName && (
-                      <p className="text-xs text-muted-foreground">
-                        Assigned to: {task.employeeName}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between pt-2">
-                      <span className={`text-xs ${isOverdue ? "text-overdue font-medium" : "text-muted-foreground"}`}>
-                        Due: {task.deadline.toLocaleDateString()}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleAssignTask(task.id)}
-                          data-testid={`button-assign-task-${task.id}`}
-                        >
-                          Assign
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </CardContent>
-        </Card>
-      ))}
+  const renderTaskList = (taskList: typeof enhancedTasks, emptyMessage: string) => (
+    <div className="space-y-4">
+      {taskList.length > 0 ? (
+        taskList.map(task => (
+          <TaskCard
+            key={task.id}
+            {...task}
+            employees={employees}
+          />
+        ))
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">{emptyMessage}</p>
+        </div>
+      )}
     </div>
   );
 
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-tasks">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
           <p className="text-muted-foreground">
-            Track and manage individual workflow tasks
+            Manage workflow tasks and assignments
           </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant={view === "list" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setView("list")}
-            data-testid="button-view-list"
-          >
-            <List className="mr-2 h-4 w-4" />
-            List
-          </Button>
-          <Button
-            variant={view === "kanban" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setView("kanban")}
-            data-testid="button-view-kanban"
-          >
-            <Kanban className="mr-2 h-4 w-4" />
-            Kanban
-          </Button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex items-center space-x-2 min-w-0 flex-1">
+          <Search className="h-4 w-4" />
           <Input
             placeholder="Search tasks..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10"
+            className="max-w-sm"
             data-testid="input-search-tasks"
           />
         </div>
-        
-        <div className="flex gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40" data-testid="select-status-filter">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="in-progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-            </SelectContent>
-          </Select>
 
-          <Select value={stageFilter} onValueChange={setStageFilter}>
-            <SelectTrigger className="w-40" data-testid="select-stage-filter">
-              <SelectValue placeholder="Stage" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Stages</SelectItem>
-              <SelectItem value="Pre-Press">Pre-Press</SelectItem>
-              <SelectItem value="Printing">Printing</SelectItem>
-              <SelectItem value="Cutting">Cutting</SelectItem>
-              <SelectItem value="Folding">Folding</SelectItem>
-              <SelectItem value="Binding">Binding</SelectItem>
-              <SelectItem value="QC">QC</SelectItem>
-              <SelectItem value="Packaging">Packaging</SelectItem>
-              <SelectItem value="Dispatch">Dispatch</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="in-progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
 
-      {/* Content */}
-      <div className="space-y-6">
-        {view === "kanban" ? (
-          <KanbanView />
-        ) : (
-          <div className="space-y-6">
-            {mockJobsWithTasks.map(job => (
-              <TaskTimeline
-                key={job.jobId}
-                jobId={job.jobId}
-                jobTitle={job.jobTitle}
-                tasks={job.tasks}
-                onAssignTask={handleAssignTask}
-                onUpdateStatus={handleUpdateStatus}
-              />
+        <Select value={stageFilter} onValueChange={setStageFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Stage" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stages</SelectItem>
+            {uniqueStages.map(stage => (
+              <SelectItem key={stage} value={stage}>
+                {stage}
+              </SelectItem>
             ))}
-          </div>
-        )}
+          </SelectContent>
+        </Select>
+
+        <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Employee" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Employees</SelectItem>
+            {employees.map(employee => (
+              <SelectItem key={employee.id} value={employee.id}>
+                {employee.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+
+      {/* Task Tabs */}
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="all">
+            All Tasks ({filteredTasks.length})
+          </TabsTrigger>
+          <TabsTrigger value="pending">
+            Pending ({pendingTasks.length})
+          </TabsTrigger>
+          <TabsTrigger value="in-progress">
+            In Progress ({inProgressTasks.length})
+          </TabsTrigger>
+          <TabsTrigger value="completed">
+            Completed ({completedTasks.length})
+          </TabsTrigger>
+          <TabsTrigger value="overdue" className="text-destructive">
+            Overdue ({overdueTasks.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-6">
+          {renderTaskList(filteredTasks, "No tasks found")}
+        </TabsContent>
+
+        <TabsContent value="pending" className="mt-6">
+          {renderTaskList(pendingTasks, "No pending tasks")}
+        </TabsContent>
+
+        <TabsContent value="in-progress" className="mt-6">
+          {renderTaskList(inProgressTasks, "No tasks in progress")}
+        </TabsContent>
+
+        <TabsContent value="completed" className="mt-6">
+          {renderTaskList(completedTasks, "No completed tasks")}
+        </TabsContent>
+
+        <TabsContent value="overdue" className="mt-6">
+          {renderTaskList(overdueTasks, "No overdue tasks")}
+        </TabsContent>
+      </Tabs>
+
+      {/* Empty State */}
+      {tasks.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">No tasks yet</p>
+          <p className="text-sm text-muted-foreground">
+            Create a job to generate workflow tasks automatically
+          </p>
+        </div>
+      )}
     </div>
   );
 }
