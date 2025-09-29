@@ -1,12 +1,15 @@
 import { useState } from "react";
 import DashboardStats from "@/components/DashboardStats";
+import DetailedStats from "@/components/DetailedStats";
 import DeadlineAlerts from "@/components/DeadlineAlerts";
+import ActivityFeed from "@/components/ActivityFeed";
 import JobCard from "@/components/JobCard";
 import CreateJobForm from "@/components/CreateJobForm";
 import Modal from "@/components/Modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Activity } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Activity, BarChart3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Job, Client } from "@shared/schema";
 
@@ -73,7 +76,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Overview of your printing workflow operations
+            Real-time overview of your printing workflow operations
           </p>
         </div>
         <Button onClick={handleCreateJob} data-testid="button-create-job">
@@ -82,54 +85,82 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* Stats */}
-      <DashboardStats 
-        totalJobs={stats?.totalJobs || 0}
-        activeJobs={stats?.activeJobs || 0}
-        completedJobs={stats?.completedJobs || 0}
-        overdueJobs={stats?.overdueJobs || 0}
-      />
+      {/* Dashboard Tabs */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="activity">Activity Feed</TabsTrigger>
+        </TabsList>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Recent Jobs */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Recent Jobs
-            </CardTitle>
-            <CardDescription>
-              Latest job activities and updates
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {recentJobs.length > 0 ? (
-              recentJobs.map(job => (
-                <JobCard 
-                  key={job.id}
-                  {...job}
-                  onView={handleViewJob}
-                />
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No jobs yet</p>
-                <Button onClick={handleCreateJob} variant="outline">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Your First Job
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Quick Stats */}
+          <DashboardStats 
+            totalJobs={stats?.totalJobs || 0}
+            activeJobs={stats?.activeJobs || 0}
+            completedJobs={stats?.completedJobs || 0}
+            overdueJobs={stats?.overdueJobs || 0}
+          />
 
-        {/* Deadline Alerts */}
-        <DeadlineAlerts 
-          items={alerts}
-          onView={handleViewDeadlineItem}
-        />
-      </div>
+          {/* Main Content Grid */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Recent Jobs */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Recent Jobs
+                </CardTitle>
+                <CardDescription>
+                  Latest job activities and updates
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {recentJobs.length > 0 ? (
+                  recentJobs.map(job => (
+                    <JobCard 
+                      key={job.id}
+                      {...job}
+                      onView={handleViewJob}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">No jobs yet</p>
+                    <Button onClick={handleCreateJob} variant="outline">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Your First Job
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Deadline Alerts */}
+            <DeadlineAlerts 
+              items={alerts}
+              onView={handleViewDeadlineItem}
+            />
+          </div>
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-6">
+          <DetailedStats />
+        </TabsContent>
+
+        {/* Activity Feed Tab */}
+        <TabsContent value="activity" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <ActivityFeed limit={20} />
+            <DeadlineAlerts 
+              items={alerts}
+              onView={handleViewDeadlineItem}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Create Job Modal */}
       <Modal

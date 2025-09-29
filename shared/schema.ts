@@ -48,13 +48,14 @@ export const tasks = pgTable("tasks", {
   remarks: text("remarks"),
   order: integer("order").notNull(), // Task order in workflow
   createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
 });
 
 // Insert schemas
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true });
-export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true });
+export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type InsertClient = z.infer<typeof insertClientSchema>;

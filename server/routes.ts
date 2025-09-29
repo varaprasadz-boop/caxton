@@ -261,6 +261,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recent activity feed
+  app.get("/api/activities/recent", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs();
+      const tasks = await storage.getTasks();
+      const clients = await storage.getClients();
+      const employees = await storage.getEmployees();
+      
+      // Create lookup maps
+      const clientMap = new Map(clients.map(c => [c.id, c]));
+      const employeeMap = new Map(employees.map(e => [e.id, e]));
+      const jobMap = new Map(jobs.map(j => [j.id, j]));
+      
+      const activities = [];
+      
+      // Recent jobs (last 10)
+      const recentJobs = jobs
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice(0, 10);
+      
+      for (const job of recentJobs) {
+        const client = clientMap.get(job.clientId);
+        activities.push({
+          id: `job-${job.id}`,
+          type: "job_created",
+          title: `New job created: ${job.description || job.jobType}`,
+          description: `Client: ${client?.name || "Unknown"}`,
+          timestamp: job.createdAt || new Date(),
+          metadata: {
+            jobId: job.id,
+            jobType: job.jobType,
+            client: client?.name,
+            quantity: job.quantity
+          }
+        });
+      }
+      
+      // Recent completed tasks (last 10)
+      const completedTasks = tasks
+        .filter(task => task.status === "completed")
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime())
+        .slice(0, 10);
+      
+      for (const task of completedTasks) {
+        const job = jobMap.get(task.jobId);
+        const client = job ? clientMap.get(job.clientId) : null;
+        const employee = task.employeeId ? employeeMap.get(task.employeeId) : null;
+        
+        activities.push({
+          id: `task-${task.id}`,
+          type: "task_completed",
+          title: `Task completed: ${task.stage}`,
+          description: `Job: ${job?.jobType || "Unknown"} • ${client?.name || "Unknown Client"}`,
+          timestamp: task.updatedAt || task.createdAt || new Date(), // Use updatedAt for completion time
+          metadata: {
+            taskId: task.id,
+            stage: task.stage,
+            employee: employee?.name,
+            jobType: job?.jobType
+          }
+        });
+      }
+      
+      // Sort all activities by timestamp and take the most recent 20
+      const sortedActivities = activities
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 20);
+      
+      res.json(sortedActivities);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch recent activities" });
+    }
+  });
+
+  // Enhanced job statistics with more details
+  app.get("/api/stats/detailed", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs();
+      const tasks = await storage.getTasks();
+      const clients = await storage.getClients();
+      const employees = await storage.getEmployees();
+      
+      const now = new Date();
+      
+      // Job statistics
+      const jobStats = {
+        total: jobs.length,
+        active: jobs.filter(job => !["completed", "delivered"].includes(job.status)).length,
+        completed: jobs.filter(job => ["completed", "delivered"].includes(job.status)).length,
+        overdue: jobs.filter(job => 
+          new Date(job.deadline) < now && !["completed", "delivered"].includes(job.status)
+        ).length
+      };
+      
+      // Task statistics
+      const taskStats = {
+        total: tasks.length,
+        pending: tasks.filter(task => task.status === "pending").length,
+        inProgress: tasks.filter(task => task.status === "in-progress").length,
+        completed: tasks.filter(task => task.status === "completed").length,
+        unassigned: tasks.filter(task => !task.employeeId).length,
+        overdue: tasks.filter(task => 
+          new Date(task.deadline) < now && task.status !== "completed"
+        ).length
+      };
+      
+      // Job type distribution
+      const jobTypeStats = jobs.reduce((acc, job) => {
+        acc[job.jobType] = (acc[job.jobType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // Stage distribution
+      const stageStats = tasks.reduce((acc, task) => {
+        acc[task.stage] = (acc[task.stage] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // Employee workload
+      const employeeWorkload = employees.map(employee => {
+        const assignedTasks = tasks.filter(task => task.employeeId === employee.id);
+        const activeTasks = assignedTasks.filter(task => task.status !== "completed");
+        const completedTasks = assignedTasks.filter(task => task.status === "completed");
+        
+        return {
+          employeeId: employee.id,
+          name: employee.name,
+          role: employee.role,
+          activeTasks: activeTasks.length,
+          completedTasks: completedTasks.length,
+          totalTasks: assignedTasks.length
+        };
+      });
+      
+      res.json({
+        jobs: jobStats,
+        tasks: taskStats,
+        jobTypes: jobTypeStats,
+        stages: stageStats,
+        employees: employeeWorkload,
+        clients: {
+          total: clients.length,
+          withActiveJobs: clients.filter(client => 
+            jobs.some(job => job.clientId === client.id && !["completed", "delivered"].includes(job.status))
+          ).length
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch detailed statistics" });
+    }
+  });
+
   // Utility function to generate workflow tasks
   async function generateJobTasks(jobId: string, jobType: string, deadline: Date) {
     const workflowStages = getWorkflowStages(jobType);

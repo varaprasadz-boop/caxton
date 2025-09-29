@@ -136,6 +136,7 @@ export class MemStorage implements IStorage {
       ...insertTask, 
       id, 
       createdAt,
+      updatedAt: createdAt, // Set initial updatedAt to createdAt
       employeeId: insertTask.employeeId || null,
       status: insertTask.status || "pending",
       remarks: insertTask.remarks || null
@@ -148,7 +149,11 @@ export class MemStorage implements IStorage {
     const task = this.tasks.get(id);
     if (!task) return undefined;
 
-    const updatedTask: Task = { ...task, ...updates };
+    const updatedTask: Task = { 
+      ...task, 
+      ...updates, 
+      updatedAt: new Date() // Always update timestamp when task is modified
+    };
     this.tasks.set(id, updatedTask);
     return updatedTask;
   }
