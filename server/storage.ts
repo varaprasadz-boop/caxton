@@ -32,6 +32,7 @@ export interface IStorage {
   getJob(id: string): Promise<Job | undefined>;
   getJobs(): Promise<Job[]>;
   createJob(job: InsertJob): Promise<Job>;
+  updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined>;
   
   // Tasks
   getTask(id: string): Promise<Task | undefined>;
@@ -68,7 +69,9 @@ export class MemStorage implements IStorage {
     const client: Client = { 
       ...insertClient, 
       id,
-      address: insertClient.address || null 
+      address: insertClient.address || null,
+      gstNo: insertClient.gstNo || null,
+      paymentMethod: insertClient.paymentMethod || "Cash"
     };
     this.clients.set(id, client);
     return client;
@@ -152,6 +155,22 @@ export class MemStorage implements IStorage {
     };
     this.jobs.set(id, job);
     return job;
+  }
+
+  async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
+    const job = this.jobs.get(id);
+    if (!job) return undefined;
+    
+    const updatedJob: Job = { 
+      ...job, 
+      ...updates,
+      description: updates.description !== undefined ? updates.description : job.description,
+      size: updates.size !== undefined ? updates.size : job.size,
+      colors: updates.colors !== undefined ? updates.colors : job.colors,
+      finishingOptions: updates.finishingOptions !== undefined ? updates.finishingOptions : job.finishingOptions
+    };
+    this.jobs.set(id, updatedJob);
+    return updatedJob;
   }
 
   // Tasks

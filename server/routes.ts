@@ -184,6 +184,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/jobs/:id", async (req, res) => {
+    try {
+      // Handle date string conversion for API compatibility
+      const requestData = { ...req.body };
+      if (requestData.deadline && typeof requestData.deadline === 'string') {
+        requestData.deadline = new Date(requestData.deadline);
+      }
+      
+      // Validate request data using partial schema for updates
+      const partialJobSchema = insertJobSchema.partial();
+      const validatedData = partialJobSchema.parse(requestData);
+      
+      const job = await storage.updateJob(req.params.id, validatedData);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid job data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update job" });
+    }
+  });
+
   // Tasks routes
   app.get("/api/tasks", async (req, res) => {
     try {

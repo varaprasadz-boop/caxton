@@ -56,8 +56,12 @@ export const tasks = pgTable("tasks", {
 // Insert schemas
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
-export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true });
-export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true }).extend({
+  status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional()
+});
+export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true }).extend({
+  status: z.enum(["pending", "in-progress", "completed"]).optional()
+});
 
 // Types
 export type InsertClient = z.infer<typeof insertClientSchema>;
