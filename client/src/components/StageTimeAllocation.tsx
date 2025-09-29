@@ -3,73 +3,83 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar } from "lucide-react";
-import { getWorkflowStages, getDefaultStageTimeAllocations, type StageTimeAllocations } from "@shared/schema";
+import { Clock, Calendar, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { getAllWorkflowStages, getDefaultStageDeadlines, type StageDeadlines } from "@shared/schema";
 
-interface StageTimeAllocationProps {
+interface StageDeadlineAllocationProps {
   jobType: string;
-  allocations: StageTimeAllocations;
-  deadline: Date;
-  onAllocationsChange: (allocations: StageTimeAllocations) => void;
+  stageDeadlines: StageDeadlines;
+  deliveryDeadline: Date;
+  onDeadlinesChange: (deadlines: StageDeadlines) => void;
+  onStageDelete?: (stage: string) => void;
 }
 
-export default function StageTimeAllocation({
+export default function StageDeadlineAllocation({
   jobType,
-  allocations,
-  deadline,
-  onAllocationsChange
-}: StageTimeAllocationProps) {
+  stageDeadlines,
+  deliveryDeadline,
+  onDeadlinesChange,
+  onStageDelete
+}: StageDeadlineAllocationProps) {
   const [stages, setStages] = useState<string[]>([]);
   
 
-  // Update stages when job type changes
+  // Update stages when job type changes - now all job types get all stages
   useEffect(() => {
-    if (jobType) {
-      const workflowStages = getWorkflowStages(jobType);
-      setStages(workflowStages);
-    } else {
-      setStages([]);
-    }
+    const allStages = getAllWorkflowStages();
+    setStages(allStages);
   }, [jobType]);
 
-  // Set default allocations when job type changes and allocations are empty
+  // Set default deadlines when job type changes and deadlines are empty
   useEffect(() => {
-    if (jobType && Object.keys(allocations).length === 0) {
-      const defaultAllocations = getDefaultStageTimeAllocations(jobType);
-      onAllocationsChange(defaultAllocations);
+    if (jobType && Object.keys(stageDeadlines).length === 0) {
+      const defaultDeadlines = getDefaultStageDeadlines(jobType, deliveryDeadline);
+      onDeadlinesChange(defaultDeadlines);
     }
-  }, [jobType]); // Only depend on jobType, not allocations
+  }, [jobType, deliveryDeadline]);
 
-  const handleTimeChange = (stage: string, hours: string) => {
-    const numHours = parseFloat(hours) || 0;
-    if (numHours >= 0.1 && numHours <= 168) { // Min 0.1 hours, max 1 week
-      onAllocationsChange({
-        ...allocations,
-        [stage]: numHours
+  const handleDeadlineChange = (stage: string, dateValue: string) => {
+    if (dateValue) {
+      const selectedDate = new Date(dateValue);
+      onDeadlinesChange({
+        ...stageDeadlines,
+        [stage]: selectedDate.toISOString()
       });
     }
   };
 
-  const getTotalHours = () => {
-    return Object.values(allocations).reduce((sum, hours) => sum + hours, 0);
+  const handleStageDelete = (stage: string) => {
+    const newDeadlines = { ...stageDeadlines };
+    delete newDeadlines[stage];
+    onDeadlinesChange(newDeadlines);
+    
+    const newStages = stages.filter(s => s !== stage);
+    setStages(newStages);
+    
+    onStageDelete?.(stage);
   };
 
-  const getStageDeadline = (stageIndex: number) => {
-    const totalHours = getTotalHours();
-    // Calculate hours before this stage using stages array order, not object key order
-    const hoursBeforeThisStage = stages
-      .slice(0, stageIndex)
-      .reduce((sum, stage) => sum + (allocations[stage] || 0), 0);
+  const formatDateForInput = (isoString: string) => {
+    if (!isoString) return '';
+    return new Date(isoString).toISOString().split('T')[0];
+  };
+
+  const getTotalDays = () => {
+    const deadlineValues = Object.values(stageDeadlines).filter(Boolean);
+    if (deadlineValues.length === 0) return 0;
     
-    const stageDeadline = new Date(deadline.getTime() - (totalHours - hoursBeforeThisStage) * 60 * 60 * 1000);
-    return stageDeadline;
+    const earliestDate = new Date(Math.min(...deadlineValues.map(d => new Date(d).getTime())));
+    const latestDate = new Date(Math.max(...deadlineValues.map(d => new Date(d).getTime())));
+    
+    return Math.ceil((latestDate.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   if (!jobType || stages.length === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex items-center justify-center h-24">
-          <p className="text-muted-foreground text-sm">Select a job type to configure stage time allocations</p>
+          <p className="text-muted-foreground text-sm">Select a job type to configure stage deadlines</p>
         </CardContent>
       </Card>
     );
@@ -79,11 +89,11 @@ export default function StageTimeAllocation({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Stage Time Allocation
+          <Calendar className="h-5 w-5" />
+          Stage Deadline Allocation
         </CardTitle>
         <CardDescription>
-          Set the time allocation for each workflow stage. Total time: {getTotalHours().toFixed(1)} hours
+          Set the deadline date for each workflow stage. Total workflow span: {getTotalDays()} days
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -94,9 +104,9 @@ export default function StageTimeAllocation({
                 {stage}
               </Label>
               <div className="flex items-center gap-2 mt-1">
-                <Calendar className="h-3 w-3 text-muted-foreground" />
+                <Clock className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">
-                  Due: {getStageDeadline(index).toLocaleDateString()} at {getStageDeadline(index).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  {stageDeadlines[stage] ? `Due: ${new Date(stageDeadlines[stage]).toLocaleDateString()}` : 'No deadline set'}
                 </span>
               </div>
             </div>
@@ -104,16 +114,22 @@ export default function StageTimeAllocation({
             <div className="flex items-center gap-2">
               <Input
                 id={`stage-${stage}`}
-                type="number"
-                min="0.1"
-                max="168"
-                step="0.5"
-                value={allocations[stage] || ""}
-                onChange={(e) => handleTimeChange(stage, e.target.value)}
-                className="w-20 text-center"
-                data-testid={`input-stage-hours-${stage.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                type="date"
+                value={formatDateForInput(stageDeadlines[stage])}
+                onChange={(e) => handleDeadlineChange(stage, e.target.value)}
+                className="w-40"
+                data-testid={`input-stage-deadline-${stage.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
               />
-              <span className="text-sm text-muted-foreground">hours</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleStageDelete(stage)}
+                className="text-destructive hover:text-destructive"
+                data-testid={`button-delete-stage-${stage.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
             
             <Badge variant="outline" className="ml-2">
@@ -122,11 +138,11 @@ export default function StageTimeAllocation({
           </div>
         ))}
         
-        {getTotalHours() > 0 && (
+        {getTotalDays() > 0 && (
           <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-            <span className="text-sm font-medium">Total Production Time</span>
+            <span className="text-sm font-medium">Total Workflow Timeline</span>
             <Badge variant="secondary">
-              {getTotalHours().toFixed(1)} hours ({(getTotalHours() / 24).toFixed(1)} days)
+              {getTotalDays()} days
             </Badge>
           </div>
         )}

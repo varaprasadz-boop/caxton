@@ -8,10 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertJobSchema, type InsertJob, type Job, type Client, JOB_TYPES, type StageTimeAllocations, getDefaultStageTimeAllocations } from "@shared/schema";
+import { insertJobSchema, type InsertJob, type Job, type Client, JOB_TYPES, type StageDeadlines, getDefaultStageDeadlines } from "@shared/schema";
 import { z } from "zod";
 import { Calendar, User } from "lucide-react";
-import StageTimeAllocation from "./StageTimeAllocation";
+import StageDeadlineAllocation from "./StageTimeAllocation";
 
 interface JobFormProps {
   job?: Job; // If provided, we're editing; otherwise, we're creating
@@ -30,7 +30,7 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
     colors: job?.colors || "",
     finishingOptions: job?.finishingOptions || "",
     deadline: job?.deadline ? new Date(job.deadline) : new Date(),
-    stageTimeAllocations: job?.stageTimeAllocations || {},
+    stageDeadlines: (job?.stageDeadlines as StageDeadlines) || {},
     status: (job?.status as any) || "pending"
   });
 
@@ -138,17 +138,17 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
     }
   };
 
-  const handleStageTimeAllocationsChange = (allocations: StageTimeAllocations) => {
-    setFormData(prev => ({ ...prev, stageTimeAllocations: allocations }));
+  const handleStageDeadlinesChange = (deadlines: StageDeadlines) => {
+    setFormData(prev => ({ ...prev, stageDeadlines: deadlines }));
   };
 
-  // Auto-populate default stage allocations when job type changes (for new jobs only)
+  // Auto-populate default stage deadlines when job type changes (for new jobs only)
   useEffect(() => {
-    if (!isEditing && formData.jobType && Object.keys(formData.stageTimeAllocations || {}).length === 0) {
-      const defaultAllocations = getDefaultStageTimeAllocations(formData.jobType);
-      setFormData(prev => ({ ...prev, stageTimeAllocations: defaultAllocations }));
+    if (!isEditing && formData.jobType && Object.keys(formData.stageDeadlines || {}).length === 0) {
+      const defaultDeadlines = getDefaultStageDeadlines(formData.jobType, formData.deadline);
+      setFormData(prev => ({ ...prev, stageDeadlines: defaultDeadlines }));
     }
-  }, [formData.jobType, isEditing, formData.stageTimeAllocations]);
+  }, [formData.jobType, isEditing, formData.stageDeadlines, formData.deadline]);
 
   const formatDateForInput = (date: Date) => {
     return date.toISOString().split('T')[0];
@@ -318,11 +318,11 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
 
           {/* Stage Time Allocation */}
           {!isEditing && (
-            <StageTimeAllocation
+            <StageDeadlineAllocation
               jobType={formData.jobType}
-              allocations={formData.stageTimeAllocations || {}}
-              deadline={formData.deadline}
-              onAllocationsChange={handleStageTimeAllocationsChange}
+              stageDeadlines={formData.stageDeadlines || {}}
+              deliveryDeadline={formData.deadline}
+              onDeadlinesChange={handleStageDeadlinesChange}
             />
           )}
 

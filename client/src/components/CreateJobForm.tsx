@@ -8,10 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertJobSchema, type InsertJob, type Client, JOB_TYPES, type StageTimeAllocations } from "@shared/schema";
+import { insertJobSchema, type InsertJob, type Client, JOB_TYPES, type StageDeadlines } from "@shared/schema";
 import { z } from "zod";
 import { Calendar, User } from "lucide-react";
-import StageTimeAllocation from "@/components/StageTimeAllocation";
+import StageDeadlineAllocation from "@/components/StageTimeAllocation";
 
 interface CreateJobFormProps {
   onSuccess?: () => void;
@@ -29,7 +29,7 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     finishingOptions: "",
     deadline: new Date(),
     status: "pending",
-    stageTimeAllocations: {}
+    stageDeadlines: {}
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -110,9 +110,9 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
   const handleSelectChange = (field: keyof InsertJob) => (value: string) => {
     const updates: Partial<InsertJob> = { [field]: value };
     
-    // Reset stage time allocations when job type changes
+    // Reset stage deadlines when job type changes
     if (field === 'jobType') {
-      updates.stageTimeAllocations = {};
+      updates.stageDeadlines = {};
     }
     
     setFormData(prev => ({ ...prev, ...updates }));
@@ -121,8 +121,8 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     }
   };
 
-  const handleStageTimeAllocationsChange = (allocations: StageTimeAllocations) => {
-    setFormData(prev => ({ ...prev, stageTimeAllocations: allocations }));
+  const handleStageDeadlinesChange = (deadlines: StageDeadlines) => {
+    setFormData(prev => ({ ...prev, stageDeadlines: deadlines }));
   };
 
   // Format date for input
@@ -288,11 +288,11 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
 
           {/* Stage Time Allocation */}
           {formData.jobType && (
-            <StageTimeAllocation
+            <StageDeadlineAllocation
               jobType={formData.jobType}
-              allocations={formData.stageTimeAllocations || {}}
-              deadline={formData.deadline}
-              onAllocationsChange={handleStageTimeAllocationsChange}
+              stageDeadlines={formData.stageDeadlines || {}}
+              deliveryDeadline={formData.deadline}
+              onDeadlinesChange={handleStageDeadlinesChange}
             />
           )}
 

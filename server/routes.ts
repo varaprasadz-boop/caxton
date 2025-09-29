@@ -9,7 +9,7 @@ import {
   JOB_TYPES,
   EMPLOYEE_ROLES,
   TASK_STAGES,
-  getWorkflowStages
+  getAllWorkflowStages
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -174,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const job = await storage.createJob(validatedData);
       
       // Auto-generate workflow tasks based on job type and stage time allocations
-      await generateJobTasks(job.id, job.jobType, job.deadline, job.stageTimeAllocations);
+      await generateJobTasks(job.id, job.jobType, job.deadline, job.stageDeadlines);
       
       res.status(201).json(job);
     } catch (error) {
@@ -502,29 +502,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Utility function to generate workflow tasks
-  async function generateJobTasks(jobId: string, jobType: string, deadline: Date, stageTimeAllocations?: any) {
-    const workflowStages = getWorkflowStages(jobType); // Now returns plain strings
+  async function generateJobTasks(jobId: string, jobType: string, deadline: Date, stageDeadlines?: any) {
+    const workflowStages = getAllWorkflowStages(); // Now all jobs get all stages
     const deliveryDate = new Date(deadline);
     
     for (let i = 0; i < workflowStages.length; i++) {
       const stage = workflowStages[i]; // Now a plain string
       let taskDeadline: Date;
       
-      if (stageTimeAllocations && Object.keys(stageTimeAllocations).length > 0) {
-        // Use custom stage time allocations if provided
-        const totalHoursBeforeThisStage = workflowStages
-          .slice(0, i)
-          .reduce((sum, s) => sum + (stageTimeAllocations[s] || 0), 0);
-        
-        const totalHours = workflowStages
-          .reduce((sum, s) => sum + (stageTimeAllocations[s] || 0), 0);
-        
-        const hoursFromDeadline = totalHours - totalHoursBeforeThisStage;
-        taskDeadline = new Date(deliveryDate.getTime() - hoursFromDeadline * 60 * 60 * 1000);
+      if (stageDeadlines && stageDeadlines[stage]) {
+        // Use custom stage deadline if provided
+        taskDeadline = new Date(stageDeadlines[stage]);
       } else {
-        // Fallback to default 1-day-per-stage logic
-        const daysBeforeDelivery = workflowStages.length - i;
-        taskDeadline = new Date(deliveryDate.getTime() - daysBeforeDelivery * 24 * 60 * 60 * 1000);
+        // Fallback to default: evenly distribute stages between now and delivery
+        const now = new Date();
+        const totalDays = Math.max(1, Math.ceil((deliveryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        const daysBetweenStages = Math.max(1, Math.floor(totalDays / workflowStages.length));
+        taskDeadline = new Date(now.getTime() + (i + 1) * daysBetweenStages * 24 * 60 * 60 * 1000);
       }
       
       await storage.createTask({
