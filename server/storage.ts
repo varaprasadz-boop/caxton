@@ -34,6 +34,7 @@ export interface IStorage {
   getTasks(): Promise<Task[]>;
   getTasksByJobId(jobId: string): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: string, updates: Partial<Pick<Task, 'status' | 'employeeId' | 'remarks'>>): Promise<Task | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -60,7 +61,11 @@ export class MemStorage implements IStorage {
 
   async createClient(insertClient: InsertClient): Promise<Client> {
     const id = randomUUID();
-    const client: Client = { ...insertClient, id };
+    const client: Client = { 
+      ...insertClient, 
+      id,
+      address: insertClient.address || null 
+    };
     this.clients.set(id, client);
     return client;
   }
@@ -76,7 +81,11 @@ export class MemStorage implements IStorage {
 
   async createEmployee(insertEmployee: InsertEmployee): Promise<Employee> {
     const id = randomUUID();
-    const employee: Employee = { ...insertEmployee, id };
+    const employee: Employee = { 
+      ...insertEmployee, 
+      id,
+      phone: insertEmployee.phone || null 
+    };
     this.employees.set(id, employee);
     return employee;
   }
@@ -93,7 +102,16 @@ export class MemStorage implements IStorage {
   async createJob(insertJob: InsertJob): Promise<Job> {
     const id = randomUUID();
     const createdAt = new Date();
-    const job: Job = { ...insertJob, id, createdAt };
+    const job: Job = { 
+      ...insertJob, 
+      id, 
+      createdAt,
+      status: insertJob.status || "pending",
+      description: insertJob.description || null,
+      size: insertJob.size || null,
+      colors: insertJob.colors || null,
+      finishingOptions: insertJob.finishingOptions || null
+    };
     this.jobs.set(id, job);
     return job;
   }
@@ -114,9 +132,25 @@ export class MemStorage implements IStorage {
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = randomUUID();
     const createdAt = new Date();
-    const task: Task = { ...insertTask, id, createdAt };
+    const task: Task = { 
+      ...insertTask, 
+      id, 
+      createdAt,
+      employeeId: insertTask.employeeId || null,
+      status: insertTask.status || "pending",
+      remarks: insertTask.remarks || null
+    };
     this.tasks.set(id, task);
     return task;
+  }
+
+  async updateTask(id: string, updates: Partial<Pick<Task, 'status' | 'employeeId' | 'remarks'>>): Promise<Task | undefined> {
+    const task = this.tasks.get(id);
+    if (!task) return undefined;
+
+    const updatedTask: Task = { ...task, ...updates };
+    this.tasks.set(id, updatedTask);
+    return updatedTask;
   }
 }
 

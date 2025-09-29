@@ -1,15 +1,309 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { 
+  insertClientSchema, 
+  insertEmployeeSchema, 
+  insertJobSchema, 
+  insertTaskSchema,
+  JOB_TYPES,
+  EMPLOYEE_ROLES,
+  TASK_STAGES
+} from "@shared/schema";
+import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  // Clients routes
+  app.get("/api/clients", async (req, res) => {
+    try {
+      const clients = await storage.getClients();
+      res.json(clients);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch clients" });
+    }
+  });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  app.get("/api/clients/:id", async (req, res) => {
+    try {
+      const client = await storage.getClient(req.params.id);
+      if (!client) {
+        return res.status(404).json({ error: "Client not found" });
+      }
+      res.json(client);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch client" });
+    }
+  });
+
+  app.post("/api/clients", async (req, res) => {
+    try {
+      const validatedData = insertClientSchema.parse(req.body);
+      const client = await storage.createClient(validatedData);
+      res.status(201).json(client);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid client data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create client" });
+    }
+  });
+
+  // Employees routes
+  app.get("/api/employees", async (req, res) => {
+    try {
+      const employees = await storage.getEmployees();
+      res.json(employees);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employees" });
+    }
+  });
+
+  app.get("/api/employees/:id", async (req, res) => {
+    try {
+      const employee = await storage.getEmployee(req.params.id);
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      res.json(employee);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employee" });
+    }
+  });
+
+  app.post("/api/employees", async (req, res) => {
+    try {
+      const validatedData = insertEmployeeSchema.parse(req.body);
+      const employee = await storage.createEmployee(validatedData);
+      res.status(201).json(employee);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid employee data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create employee" });
+    }
+  });
+
+  // Jobs routes
+  app.get("/api/jobs", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs();
+      res.json(jobs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  });
+
+  app.get("/api/jobs/:id", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch job" });
+    }
+  });
+
+  app.post("/api/jobs", async (req, res) => {
+    try {
+      const validatedData = insertJobSchema.parse(req.body);
+      const job = await storage.createJob(validatedData);
+      
+      // Auto-generate workflow tasks based on job type
+      await generateJobTasks(job.id, job.jobType, job.deadline);
+      
+      res.status(201).json(job);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid job data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create job" });
+    }
+  });
+
+  // Tasks routes
+  app.get("/api/tasks", async (req, res) => {
+    try {
+      const { jobId } = req.query;
+      let tasks;
+      
+      if (jobId && typeof jobId === 'string') {
+        tasks = await storage.getTasksByJobId(jobId);
+      } else {
+        tasks = await storage.getTasks();
+      }
+      
+      res.json(tasks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch tasks" });
+    }
+  });
+
+  app.get("/api/tasks/:id", async (req, res) => {
+    try {
+      const task = await storage.getTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch task" });
+    }
+  });
+
+  app.post("/api/tasks", async (req, res) => {
+    try {
+      const validatedData = insertTaskSchema.parse(req.body);
+      const task = await storage.createTask(validatedData);
+      res.status(201).json(task);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid task data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create task" });
+    }
+  });
+
+  app.patch("/api/tasks/:id", async (req, res) => {
+    try {
+      const { status, employeeId, remarks } = req.body;
+      const task = await storage.updateTask(req.params.id, { status, employeeId, remarks });
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update task" });
+    }
+  });
+
+  // Job statistics route
+  app.get("/api/stats/jobs", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs();
+      const now = new Date();
+      
+      const stats = {
+        totalJobs: jobs.length,
+        activeJobs: jobs.filter(job => !["completed", "delivered"].includes(job.status)).length,
+        completedJobs: jobs.filter(job => ["completed", "delivered"].includes(job.status)).length,
+        overdueJobs: jobs.filter(job => 
+          new Date(job.deadline) < now && !["completed", "delivered"].includes(job.status)
+        ).length
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch job statistics" });
+    }
+  });
+
+  // Deadline alerts route
+  app.get("/api/alerts/deadlines", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs();
+      const tasks = await storage.getTasks();
+      const clients = await storage.getClients();
+      const employees = await storage.getEmployees();
+      
+      const now = new Date();
+      const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      
+      // Create lookup maps
+      const clientMap = new Map(clients.map(c => [c.id, c]));
+      const employeeMap = new Map(employees.map(e => [e.id, e]));
+      
+      const alerts = [];
+      
+      // Check jobs
+      for (const job of jobs) {
+        if (!["completed", "delivered"].includes(job.status)) {
+          const deadline = new Date(job.deadline);
+          const client = clientMap.get(job.clientId);
+          
+          if (deadline <= threeDaysFromNow) {
+            alerts.push({
+              id: job.id,
+              title: `Job: ${job.description || job.jobType}`,
+              type: "job",
+              client: client?.name,
+              deadline,
+              status: job.status
+            });
+          }
+        }
+      }
+      
+      // Check tasks
+      for (const task of tasks) {
+        if (task.status !== "completed") {
+          const deadline = new Date(task.deadline);
+          const employee = task.employeeId ? employeeMap.get(task.employeeId) : null;
+          
+          if (deadline <= threeDaysFromNow) {
+            alerts.push({
+              id: task.id,
+              title: `Task: ${task.stage}`,
+              type: "task",
+              employee: employee?.name,
+              deadline,
+              status: task.status,
+              stage: task.stage
+            });
+          }
+        }
+      }
+      
+      res.json(alerts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch deadline alerts" });
+    }
+  });
+
+  // Utility function to generate workflow tasks
+  async function generateJobTasks(jobId: string, jobType: string, deadline: Date) {
+    const workflowStages = getWorkflowStages(jobType);
+    const deliveryDate = new Date(deadline);
+    
+    for (let i = 0; i < workflowStages.length; i++) {
+      const stage = workflowStages[i];
+      const daysBeforeDelivery = workflowStages.length - i;
+      const taskDeadline = new Date(deliveryDate.getTime() - daysBeforeDelivery * 24 * 60 * 60 * 1000);
+      
+      await storage.createTask({
+        jobId,
+        stage: stage.name,
+        deadline: taskDeadline,
+        status: "pending",
+        order: i + 1,
+        employeeId: null,
+        remarks: null
+      });
+    }
+  }
+
+  function getWorkflowStages(jobType: string) {
+    const baseStages = [
+      { name: "Pre-Press" },
+      { name: "Printing" },
+      { name: "QC" },
+      { name: "Packaging" },
+      { name: "Dispatch" }
+    ];
+    
+    // Add job-specific stages
+    if (["Booklet", "Brochures"].includes(jobType)) {
+      baseStages.splice(2, 0, { name: "Cutting" }, { name: "Folding" }, { name: "Binding" });
+    } else if (["Carton", "Pouch Folder"].includes(jobType)) {
+      baseStages.splice(2, 0, { name: "Cutting" }, { name: "Folding" });
+    } else {
+      baseStages.splice(2, 0, { name: "Cutting" });
+    }
+    
+    return baseStages;
+  }
 
   const httpServer = createServer(app);
-
   return httpServer;
 }
