@@ -58,7 +58,7 @@ export const tasks = pgTable("tasks", {
   employeeId: varchar("employee_id"),
   departmentId: varchar("department_id").notNull(), // Reference to departments (replaces stage)
   deadline: timestamp("deadline").notNull(),
-  status: text("status").notNull().default("pending"), // pending, in-progress, completed, delayed
+  status: text("status").notNull().default("pending"), // pending, in-queue, in-progress, completed, delayed
   delayComment: text("delay_comment"), // Comment when task is marked as delayed
   remarks: text("remarks"),
   order: integer("order").notNull(), // Task order in workflow
@@ -79,7 +79,7 @@ export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, created
   poFileUrl: z.string().min(1).optional() // Allow relative URLs for local file storage
 });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true }).extend({
-  status: z.enum(["pending", "in-progress", "completed", "delayed"]).optional(),
+  status: z.enum(["pending", "in-queue", "in-progress", "completed", "delayed"]).optional(),
   delayComment: z.string().optional()
 });
 
@@ -116,7 +116,7 @@ export type StageDeadlines = {
 export const JOB_STATUSES = ["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"] as const;
 export type JobStatus = typeof JOB_STATUSES[number];
 
-export const TASK_STATUSES = ["pending", "in-progress", "completed", "delayed"] as const;
+export const TASK_STATUSES = ["pending", "in-queue", "in-progress", "completed", "delayed"] as const;
 export type TaskStatus = typeof TASK_STATUSES[number];
 
 // Helper function to get workflow stages for a job type
