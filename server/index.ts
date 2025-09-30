@@ -12,20 +12,18 @@ app.use(cors()); // allow cross-origin requests
 const PORT = process.env.PORT || 3000;
 
 // Session configuration
-app.use(
-  session({
-    secret:
-      process.env.SESSION_SECRET ||
-      "caxton-php-secret-key-change-in-production",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    },
-  })
-);
+app.use(session({
+  secret: process.env.SESSION_SECRET || "caxton-php-secret-key-change-in-production",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production", // required for HTTPS
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // 👈 allow cross-site cookies
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  }
+}));
+
 
 // API request logger
 app.use((req, res, next) => {
