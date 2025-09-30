@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Download, Share, FileText, Calendar, Package, User, Palette, Scissors } from "lucide-react";
+import { ArrowLeft, Edit, Download, Share, FileText, Calendar, Package, User, Palette, Scissors, Cog } from "lucide-react";
 import JobTimelineVisualization from "@/components/JobTimelineVisualization";
 import JobForm from "@/components/JobForm";
 // import TaskAssignmentModal from "@/components/TaskAssignmentModal"; // TODO: Implement this component
@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { type Job, type Client } from "@shared/schema";
+import { type Job, type Client, type Machine } from "@shared/schema";
 import { format } from "date-fns";
 
 export default function JobDetail() {
@@ -44,6 +44,11 @@ export default function JobDetail() {
       return res.json();
     },
     enabled: !!job?.clientId
+  });
+
+  // Fetch all machines to display selected ones
+  const { data: machines = [] } = useQuery<Machine[]>({
+    queryKey: ["/api/machines"]
   });
 
   // Mutation for updating task status
@@ -213,6 +218,25 @@ export default function JobDetail() {
                   <div>
                     <p className="text-sm font-medium">Finishing Options</p>
                     <p className="text-sm text-muted-foreground">{job.finishingOptions}</p>
+                  </div>
+                </div>
+              )}
+
+              {job.machineIds && job.machineIds.length > 0 && (
+                <div className="flex items-start gap-3">
+                  <Cog className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium mb-2">Machines</p>
+                    <div className="flex flex-wrap gap-2">
+                      {job.machineIds.map(machineId => {
+                        const machine = machines.find(m => m.id === machineId);
+                        return machine ? (
+                          <Badge key={machineId} variant="secondary" data-testid={`badge-machine-${machineId}`}>
+                            {machine.name}
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
