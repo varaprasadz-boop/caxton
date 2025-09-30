@@ -12,6 +12,7 @@ import Jobs from "@/pages/Jobs";
 import JobDetail from "@/pages/JobDetail";
 import Tasks from "@/pages/Tasks";
 import Clients from "@/pages/Clients";
+import ClientDetail from "@/pages/ClientDetail";
 import Departments from "@/pages/Departments";
 import Employees from "@/pages/Employees";
 import EmployeeDetail from "@/pages/EmployeeDetail";
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/jobs/:id" component={JobDetail} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/clients" component={Clients} />
+      <Route path="/clients/:id" component={ClientDetail} />
       <Route path="/departments" component={Departments} />
       <Route path="/employees" component={Employees} />
       <Route path="/employees/:id" component={EmployeeDetail} />

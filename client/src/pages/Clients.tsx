@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import ClientCard from "@/components/ClientCard";
 import CreateClientForm from "@/components/CreateClientForm";
 import Modal from "@/components/Modal";
@@ -9,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Client } from "@shared/schema";
 
 export default function Clients() {
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
 
@@ -42,7 +44,7 @@ export default function Clients() {
   };
 
   const handleViewClient = (id: string) => {
-    console.log('Viewing client:', id);
+    setLocation(`/clients/${id}`);
   };
 
   const handleEditClient = (id: string) => {
