@@ -5,10 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertJobSchema, type InsertJob, type Client, JOB_TYPES, type StageDeadlines } from "@shared/schema";
+import { insertJobSchema, type InsertJob, type Client, type Machine, JOB_TYPES, type StageDeadlines } from "@shared/schema";
 import { z } from "zod";
 import { Calendar, User, Upload, FileText, X } from "lucide-react";
 import StageDeadlineAllocation from "@/components/StageTimeAllocation";
@@ -36,7 +37,8 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     finishingOptions: "",
     deadline: getDefaultDeadline(),
     status: "pending",
-    stageDeadlines: {}
+    stageDeadlines: {},
+    machineIds: []
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -45,9 +47,13 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch clients for the dropdown
+  // Fetch clients and machines for the dropdowns
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"]
+  });
+
+  const { data: machines = [] } = useQuery<Machine[]>({
+    queryKey: ["/api/machines"]
   });
 
   const uploadPOFile = async (file: File): Promise<string> => {
@@ -177,6 +183,20 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
 
   const handleStageDeadlinesChange = (deadlines: StageDeadlines) => {
     setFormData(prev => ({ ...prev, stageDeadlines: deadlines }));
+  };
+
+  const toggleMachine = (machineId: string) => {
+    setFormData(prev => {
+      const currentMachineIds = prev.machineIds || [];
+      const isSelected = currentMachineIds.includes(machineId);
+      
+      return {
+        ...prev,
+        machineIds: isSelected
+          ? currentMachineIds.filter(id => id !== machineId)
+          : [...currentMachineIds, machineId]
+      };
+    });
   };
 
   const handlePOFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -371,6 +391,36 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
               )}
             </div>
           </div>
+
+          {/* Machine Selection */}
+          {machines.length > 0 && (
+            <div className="space-y-3">
+              <Label>Select Machines (Optional)</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {machines.map((machine) => (
+                  <div key={machine.id} className="flex items-center space-x-2" data-testid={`checkbox-container-machine-${machine.id}`}>
+                    <Checkbox
+                      id={`machine-${machine.id}`}
+                      checked={(formData.machineIds || []).includes(machine.id)}
+                      onCheckedChange={() => toggleMachine(machine.id)}
+                      data-testid={`checkbox-machine-${machine.id}`}
+                    />
+                    <Label
+                      htmlFor={`machine-${machine.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {machine.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {(formData.machineIds || []).length > 0 && (
+                <p className="text-xs text-muted-foreground" data-testid="text-selected-machines-count">
+                  {(formData.machineIds || []).length} machine(s) selected
+                </p>
+              )}
+            </div>
+          )}
 
           {/* PO File Upload */}
           <div className="space-y-2">
