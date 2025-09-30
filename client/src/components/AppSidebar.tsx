@@ -8,7 +8,8 @@ import {
   UserCheck,
   FileText,
   Building2,
-  FileBarChart
+  FileBarChart,
+  Cog
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -53,6 +54,11 @@ const menuItems = [
     title: "Employees",
     url: "/employees",
     icon: UserCheck,
+  },
+  {
+    title: "Machines",
+    url: "/machines",
+    icon: Cog,
   },
   {
     title: "Reports",
