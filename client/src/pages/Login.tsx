@@ -13,15 +13,14 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const API_URL = import.meta.env.VITE_API_URL;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+//  const API_URL = import.meta.env.VITE_API_URL;
 
     try {
-      console.log(import.meta.env);
-      const res = await apiRequest("POST",`${API_URL}/api/login`, { email, password });
+      const res = await apiRequest("POST", "/api/login", { email, password });
       const user = await res.json();
 
       toast({
