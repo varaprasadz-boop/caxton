@@ -1,6 +1,8 @@
 import { 
   type Client, 
-  type InsertClient, 
+  type InsertClient,
+  type Department,
+  type InsertDepartment,
   type Employee, 
   type InsertEmployee,
   type Job,
@@ -8,6 +10,7 @@ import {
   type Task,
   type InsertTask,
   clients,
+  departments,
   employees,
   jobs,
   tasks
@@ -26,6 +29,13 @@ export interface IStorage {
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, updates: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: string): Promise<boolean>;
+  
+  // Departments
+  getDepartment(id: string): Promise<Department | undefined>;
+  getDepartments(): Promise<Department[]>;
+  createDepartment(department: InsertDepartment): Promise<Department>;
+  updateDepartment(id: string, updates: Partial<InsertDepartment>): Promise<Department | undefined>;
+  deleteDepartment(id: string): Promise<boolean>;
   
   // Employees
   getEmployee(id: string): Promise<Employee | undefined>;
@@ -50,12 +60,14 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private clients: Map<string, Client>;
+  private departments: Map<string, Department>;
   private employees: Map<string, Employee>;
   private jobs: Map<string, Job>;
   private tasks: Map<string, Task>;
 
   constructor() {
     this.clients = new Map();
+    this.departments = new Map();
     this.employees = new Map();
     this.jobs = new Map();
     this.tasks = new Map();
@@ -100,6 +112,44 @@ export class MemStorage implements IStorage {
     return this.clients.delete(id);
   }
 
+  // Departments
+  async getDepartment(id: string): Promise<Department | undefined> {
+    return this.departments.get(id);
+  }
+
+  async getDepartments(): Promise<Department[]> {
+    return Array.from(this.departments.values()).sort((a, b) => a.order - b.order);
+  }
+
+  async createDepartment(insertDepartment: InsertDepartment): Promise<Department> {
+    const id = randomUUID();
+    const createdAt = new Date();
+    const department: Department = { 
+      ...insertDepartment,
+      id,
+      description: insertDepartment.description || null,
+      createdAt
+    };
+    this.departments.set(id, department);
+    return department;
+  }
+
+  async updateDepartment(id: string, updates: Partial<InsertDepartment>): Promise<Department | undefined> {
+    const department = this.departments.get(id);
+    if (!department) return undefined;
+    
+    const updatedDepartment: Department = { 
+      ...department, 
+      ...updates 
+    };
+    this.departments.set(id, updatedDepartment);
+    return updatedDepartment;
+  }
+
+  async deleteDepartment(id: string): Promise<boolean> {
+    return this.departments.delete(id);
+  }
+
   // Employees
   async getEmployee(id: string): Promise<Employee | undefined> {
     return this.employees.get(id);
@@ -114,7 +164,8 @@ export class MemStorage implements IStorage {
     const employee: Employee = { 
       ...insertEmployee, 
       id,
-      phone: insertEmployee.phone || null 
+      phone: insertEmployee.phone || null,
+      departmentId: insertEmployee.departmentId || null
     };
     this.employees.set(id, employee);
     return employee;
@@ -157,7 +208,9 @@ export class MemStorage implements IStorage {
       description: insertJob.description || null,
       size: insertJob.size || null,
       colors: insertJob.colors || null,
-      finishingOptions: insertJob.finishingOptions || null
+      finishingOptions: insertJob.finishingOptions || null,
+      stageDeadlines: insertJob.stageDeadlines || null,
+      poFileUrl: insertJob.poFileUrl || null
     };
     this.jobs.set(id, job);
     return job;
@@ -199,10 +252,11 @@ export class MemStorage implements IStorage {
       ...insertTask, 
       id, 
       createdAt,
-      updatedAt: createdAt, // Set initial updatedAt to createdAt
+      updatedAt: createdAt,
       employeeId: insertTask.employeeId || null,
       status: insertTask.status || "pending",
-      remarks: insertTask.remarks || null
+      remarks: insertTask.remarks || null,
+      delayComment: insertTask.delayComment || null
     };
     this.tasks.set(id, task);
     return task;
@@ -246,7 +300,32 @@ export class PostgreSQLStorage implements IStorage {
 
   async deleteClient(id: string): Promise<boolean> {
     const result = await db.delete(clients).where(eq(clients.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Departments
+  async getDepartment(id: string): Promise<Department | undefined> {
+    const result = await db.select().from(departments).where(eq(departments.id, id));
+    return result[0] || undefined;
+  }
+
+  async getDepartments(): Promise<Department[]> {
+    return await db.select().from(departments).orderBy(departments.order);
+  }
+
+  async createDepartment(insertDepartment: InsertDepartment): Promise<Department> {
+    const result = await db.insert(departments).values(insertDepartment).returning();
+    return result[0];
+  }
+
+  async updateDepartment(id: string, updates: Partial<InsertDepartment>): Promise<Department | undefined> {
+    const result = await db.update(departments).set(updates).where(eq(departments.id, id)).returning();
+    return result[0] || undefined;
+  }
+
+  async deleteDepartment(id: string): Promise<boolean> {
+    const result = await db.delete(departments).where(eq(departments.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Employees
@@ -271,7 +350,7 @@ export class PostgreSQLStorage implements IStorage {
 
   async deleteEmployee(id: string): Promise<boolean> {
     const result = await db.delete(employees).where(eq(employees.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Jobs

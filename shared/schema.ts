@@ -15,11 +15,20 @@ export const clients = pgTable("clients", {
   paymentMethod: text("payment_method").notNull().default("Cash"), // Cash, Online
 });
 
+// Departments table
+export const departments = pgTable("departments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  order: integer("order").notNull(), // Display order in workflow
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Employees table
 export const employees = pgTable("employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  role: text("role").notNull(), // Designer, Printer, Binder, QC, Packaging, Logistics
+  departmentId: varchar("department_id"), // Reference to departments
   email: text("email").notNull(),
   phone: text("phone"),
 });
@@ -46,7 +55,7 @@ export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobId: varchar("job_id").notNull(),
   employeeId: varchar("employee_id"),
-  stage: text("stage").notNull(), // Pre-Press, Printing, Cutting, Folding, Binding, QC, Packaging, Dispatch
+  departmentId: varchar("department_id").notNull(), // Reference to departments (replaces stage)
   deadline: timestamp("deadline").notNull(),
   status: text("status").notNull().default("pending"), // pending, in-progress, completed, delayed
   delayComment: text("delay_comment"), // Comment when task is marked as delayed
@@ -61,6 +70,7 @@ export const stageDeadlinesSchema = z.record(z.string(), z.string().datetime());
 
 // Insert schemas
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
+export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true }).extend({
   status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional(),
@@ -75,6 +85,8 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, creat
 // Types
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+export type Department = typeof departments.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
 export type InsertJob = z.infer<typeof insertJobSchema>;

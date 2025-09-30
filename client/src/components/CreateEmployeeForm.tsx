@@ -5,9 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertEmployeeSchema, type InsertEmployee, EMPLOYEE_ROLES } from "@shared/schema";
+import { insertEmployeeSchema, type InsertEmployee, type Department } from "@shared/schema";
 import { z } from "zod";
 
 interface CreateEmployeeFormProps {
@@ -18,7 +18,7 @@ interface CreateEmployeeFormProps {
 export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmployeeFormProps) {
   const [formData, setFormData] = useState<InsertEmployee>({
     name: "",
-    role: "",
+    departmentId: "",
     email: "",
     phone: ""
   });
@@ -26,6 +26,11 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch departments for dropdown
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"]
+  });
 
   const createEmployeeMutation = useMutation({
     mutationFn: async (data: InsertEmployee) => {
@@ -78,10 +83,10 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
     }
   };
 
-  const handleRoleChange = (value: string) => {
-    setFormData(prev => ({ ...prev, role: value }));
-    if (errors.role) {
-      setErrors(prev => ({ ...prev, role: "" }));
+  const handleDepartmentChange = (value: string) => {
+    setFormData(prev => ({ ...prev, departmentId: value }));
+    if (errors.departmentId) {
+      setErrors(prev => ({ ...prev, departmentId: "" }));
     }
   };
 
@@ -111,21 +116,22 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role">Role *</Label>
-              <Select value={formData.role} onValueChange={handleRoleChange}>
-                <SelectTrigger data-testid="select-employee-role">
-                  <SelectValue placeholder="Select role" />
+              <Label htmlFor="department">Department</Label>
+              <Select value={formData.departmentId || ""} onValueChange={handleDepartmentChange}>
+                <SelectTrigger data-testid="select-employee-department">
+                  <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  {EMPLOYEE_ROLES.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.role && (
-                <p className="text-sm text-destructive">{errors.role}</p>
+              {errors.departmentId && (
+                <p className="text-sm text-destructive">{errors.departmentId}</p>
               )}
             </div>
           </div>

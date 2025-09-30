@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { Employee } from "@shared/schema";
+import type { Employee, Department, Task } from "@shared/schema";
 
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
   const [isCreateEmployeeModalOpen, setIsCreateEmployeeModalOpen] = useState(false);
 
   // Fetch real data
@@ -19,7 +19,11 @@ export default function Employees() {
     queryKey: ["/api/employees"]
   });
 
-  const { data: tasks = [] } = useQuery({
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"]
+  });
+
+  const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"]
   });
 
@@ -54,20 +58,25 @@ export default function Employees() {
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
-    console.log('Searching employees:', value);
   };
 
-  const handleRoleFilter = (value: string) => {
-    setRoleFilter(value);
-    console.log('Filtering by role:', value);
+  const handleDepartmentFilter = (value: string) => {
+    setDepartmentFilter(value);
   };
+
+  // Create a map of department IDs to names for easier lookup
+  const departmentMap = departments.reduce((acc, dept) => {
+    acc[dept.id] = dept.name;
+    return acc;
+  }, {} as Record<string, string>);
 
   const filteredEmployees = employeesWithStats.filter(employee => {
+    const departmentName = employee.departmentId ? departmentMap[employee.departmentId] : "Unassigned";
     const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (departmentName && departmentName.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          employee.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "all" || employee.role === roleFilter;
-    return matchesSearch && matchesRole;
+    const matchesDepartment = departmentFilter === "all" || employee.departmentId === departmentFilter || (departmentFilter === "unassigned" && !employee.departmentId);
+    return matchesSearch && matchesDepartment;
   });
 
   return (
@@ -99,18 +108,18 @@ export default function Employees() {
           />
         </div>
         
-        <Select value={roleFilter} onValueChange={handleRoleFilter}>
-          <SelectTrigger className="w-48" data-testid="select-role-filter">
-            <SelectValue placeholder="Filter by role" />
+        <Select value={departmentFilter} onValueChange={handleDepartmentFilter}>
+          <SelectTrigger className="w-48" data-testid="select-department-filter">
+            <SelectValue placeholder="Filter by department" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="Designer">Designer</SelectItem>
-            <SelectItem value="Printer">Printer</SelectItem>
-            <SelectItem value="Binder">Binder</SelectItem>
-            <SelectItem value="QC">QC</SelectItem>
-            <SelectItem value="Packaging">Packaging</SelectItem>
-            <SelectItem value="Logistics">Logistics</SelectItem>
+            <SelectItem value="all">All Departments</SelectItem>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {departments.map((dept) => (
+              <SelectItem key={dept.id} value={dept.id}>
+                {dept.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -120,7 +129,13 @@ export default function Employees() {
         {filteredEmployees.map(employee => (
           <EmployeeCard
             key={employee.id}
-            {...employee}
+            id={employee.id}
+            name={employee.name}
+            email={employee.email}
+            phone={employee.phone || undefined}
+            activeTasks={employee.activeTasks}
+            completedTasks={employee.completedTasks}
+            department={employee.departmentId ? departmentMap[employee.departmentId] : "Unassigned"}
             onView={handleViewEmployee}
             onEdit={handleEditEmployee}
           />
@@ -128,7 +143,7 @@ export default function Employees() {
       </div>
 
       {/* Empty State */}
-      {filteredEmployees.length === 0 && (searchTerm || roleFilter !== "all") && (
+      {filteredEmployees.length === 0 && (searchTerm || departmentFilter !== "all") && (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">
             No employees found matching your criteria
@@ -137,7 +152,7 @@ export default function Employees() {
             <Button variant="outline" onClick={() => setSearchTerm("")}>
               Clear Search
             </Button>
-            <Button variant="outline" onClick={() => setRoleFilter("all")}>
+            <Button variant="outline" onClick={() => setDepartmentFilter("all")}>
               Clear Filters
             </Button>
           </div>

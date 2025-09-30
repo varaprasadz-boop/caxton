@@ -6,7 +6,8 @@ import {
   BarChart3,
   Settings,
   UserCheck,
-  FileText
+  FileText,
+  Building2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -41,6 +42,11 @@ const menuItems = [
     title: "Clients",
     url: "/clients",
     icon: Users,
+  },
+  {
+    title: "Departments",
+    url: "/departments",
+    icon: Building2,
   },
   {
     title: "Employees",
