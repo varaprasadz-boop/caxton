@@ -487,6 +487,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/tasks/:id", async (req, res) => {
     try {
       const { status, employeeId, remarks } = req.body;
+      
+      // Get current task to check its status
+      const currentTask = await storage.getTask(req.params.id);
+      if (!currentTask) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      
+      // Prevent status or assignment changes for in-queue tasks
+      if (currentTask.status === "in-queue" && (status !== undefined || employeeId !== undefined)) {
+        return res.status(400).json({ 
+          error: "Cannot modify in-queue tasks", 
+          details: "Tasks in queue cannot be updated until the previous task is completed"
+        });
+      }
+      
       const task = await storage.updateTask(req.params.id, { status, employeeId, remarks });
       if (!task) {
         return res.status(404).json({ error: "Task not found" });

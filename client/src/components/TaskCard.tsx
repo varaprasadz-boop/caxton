@@ -19,12 +19,14 @@ interface TaskCardProps extends Task {
 
 const statusIcons = {
   pending: AlertCircle,
+  "in-queue": Clock,
   "in-progress": Clock,
   completed: CheckCircle
 };
 
 const statusColors = {
   pending: "default",
+  "in-queue": "secondary",
   "in-progress": "secondary", 
   completed: "default"
 } as const;
@@ -137,7 +139,7 @@ export default function TaskCard({
           <Select
             value={employeeId || "unassigned"}
             onValueChange={handleAssignEmployee}
-            disabled={assignTaskMutation.isPending}
+            disabled={assignTaskMutation.isPending || status === "in-queue"}
           >
             <SelectTrigger className="w-40" data-testid={`select-employee-${id}`}>
               <SelectValue placeholder="Unassigned" />
@@ -162,13 +164,14 @@ export default function TaskCard({
           <Select
             value={status}
             onValueChange={handleStatusUpdate}
-            disabled={updateStatusMutation.isPending}
+            disabled={updateStatusMutation.isPending || status === "in-queue"}
           >
             <SelectTrigger className="w-40" data-testid={`select-status-${id}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="in-queue">In Queue</SelectItem>
               <SelectItem value="in-progress">In Progress</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
