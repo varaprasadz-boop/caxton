@@ -1052,22 +1052,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Utility function to generate workflow tasks
   async function generateJobTasks(jobId: string, jobType: string, deadline: Date, stageDeadlines?: any) {
-    const departments = await storage.getDepartments();
+    const allDepartments = await storage.getDepartments();
     const employees = await storage.getEmployees();
-    const deliveryDate = new Date(deadline);
     
-    for (let i = 0; i < departments.length; i++) {
-      const department = departments[i];
+    // If stageDeadlines is provided, only create tasks for departments in stageDeadlines
+    // This allows users to delete unwanted departments before saving
+    let departmentsToUse: any[] = [];
+    
+    if (stageDeadlines && Object.keys(stageDeadlines).length > 0) {
+      // Filter departments to only those with deadlines set
+      // Maintain department order based on their 'order' field
+      departmentsToUse = allDepartments
+        .filter(dept => stageDeadlines[dept.id])
+        .sort((a, b) => a.order - b.order);
+    } else {
+      // If no stage deadlines, create tasks for all departments (backward compatibility)
+      departmentsToUse = [...allDepartments].sort((a, b) => a.order - b.order);
+    }
+    
+    for (let i = 0; i < departmentsToUse.length; i++) {
+      const department = departmentsToUse[i];
       let taskDeadline: Date;
       
       if (stageDeadlines && stageDeadlines[department.id]) {
-        // Use custom stage deadline if provided
+        // Use the deadline from stageDeadlines
         taskDeadline = new Date(stageDeadlines[department.id]);
       } else {
         // Fallback to default: evenly distribute departments between now and delivery
         const now = new Date();
+        const deliveryDate = new Date(deadline);
         const totalDays = Math.max(1, Math.ceil((deliveryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-        const daysBetweenStages = Math.max(1, Math.floor(totalDays / departments.length));
+        const daysBetweenStages = Math.max(1, Math.floor(totalDays / departmentsToUse.length));
         taskDeadline = new Date(now.getTime() + (i + 1) * daysBetweenStages * 24 * 60 * 60 * 1000);
       }
       

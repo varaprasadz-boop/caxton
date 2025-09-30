@@ -5,15 +5,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getAllWorkflowStages, getDefaultStageDeadlines, type StageDeadlines } from "@shared/schema";
+import { type StageDeadlines, type Department } from "@shared/schema";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 
 interface StageDeadlineAllocationProps {
   jobType: string;
   stageDeadlines: StageDeadlines;
   deliveryDeadline: Date;
   onDeadlinesChange: (deadlines: StageDeadlines) => void;
-  onStageDelete?: (stage: string) => void;
 }
 
 export default function StageDeadlineAllocation({
@@ -21,26 +21,45 @@ export default function StageDeadlineAllocation({
   stageDeadlines,
   deliveryDeadline,
   onDeadlinesChange,
-  onStageDelete
 }: StageDeadlineAllocationProps) {
-  const [stages, setStages] = useState<string[]>([]);
-  
+  // Fetch all departments from the database
+  const { data: departments = [], isLoading } = useQuery<Department[]>({
+    queryKey: ["/api/departments"]
+  });
 
-  // Update stages when job type changes - now all job types get all stages
-  useEffect(() => {
-    const allStages = getAllWorkflowStages();
-    setStages(allStages);
-  }, [jobType]);
+  // Sort departments by their order field
+  const sortedDepartments = [...departments].sort((a, b) => a.order - b.order);
 
-  // Set default deadlines when job type changes and deadlines are empty
+  // Initialize active departments based on existing stageDeadlines or all departments
+  // This ensures deletions persist and the component responds to prop changes
   useEffect(() => {
-    if (jobType && Object.keys(stageDeadlines).length === 0) {
-      const defaultDeadlines = getDefaultStageDeadlines(jobType, deliveryDeadline);
-      onDeadlinesChange(defaultDeadlines);
+    if (sortedDepartments.length === 0) return; // Wait for departments to load
+    
+    // If stageDeadlines already exists (editing mode), use those department IDs
+    if (Object.keys(stageDeadlines).length > 0) {
+      // Don't auto-populate, respect existing stageDeadlines
+      return;
     }
-  }, [jobType, deliveryDeadline]);
+    
+    // Auto-generate default deadlines for all departments (creation mode)
+    const defaultDeadlines: StageDeadlines = {};
+    const totalDays = Math.max(1, Math.ceil((deliveryDeadline.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+    const daysPerDepartment = Math.max(1, Math.floor(totalDays / sortedDepartments.length));
+    
+    sortedDepartments.forEach((dept, index) => {
+      const deadlineDate = new Date();
+      deadlineDate.setDate(deadlineDate.getDate() + ((index + 1) * daysPerDepartment));
+      // Ensure deadline doesn't exceed delivery deadline
+      if (deadlineDate > deliveryDeadline) {
+        deadlineDate.setTime(deliveryDeadline.getTime());
+      }
+      defaultDeadlines[dept.id] = deadlineDate.toISOString();
+    });
+    
+    onDeadlinesChange(defaultDeadlines);
+  }, [departments, jobType, deliveryDeadline]); // Depend on actual data, not length
 
-  const handleDeadlineChange = (stage: string, dateValue: string) => {
+  const handleDeadlineChange = (departmentId: string, dateValue: string) => {
     if (dateValue) {
       // Parse both dates as UTC midnight to avoid timezone issues
       const [year, month, day] = dateValue.split('-').map(Number);
@@ -61,20 +80,17 @@ export default function StageDeadlineAllocation({
       
       onDeadlinesChange({
         ...stageDeadlines,
-        [stage]: selectedDate.toISOString()
+        [departmentId]: selectedDate.toISOString()
       });
     }
   };
 
-  const handleStageDelete = (stage: string) => {
+  const handleDepartmentDelete = (departmentId: string) => {
+    // Remove from deadlines - this automatically removes it from active departments
+    // since activeDepartments is derived from stageDeadlines
     const newDeadlines = { ...stageDeadlines };
-    delete newDeadlines[stage];
+    delete newDeadlines[departmentId];
     onDeadlinesChange(newDeadlines);
-    
-    const newStages = stages.filter(s => s !== stage);
-    setStages(newStages);
-    
-    onStageDelete?.(stage);
   };
 
   const formatDateForInput = (isoString: string) => {
@@ -92,11 +108,27 @@ export default function StageDeadlineAllocation({
     return Math.ceil((latestDate.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24));
   };
 
-  if (!jobType || stages.length === 0) {
+  // Get active departments based on which ones have deadlines set
+  // This ensures deletions persist correctly
+  const activeDepartments = sortedDepartments.filter(dept => 
+    stageDeadlines[dept.id] !== undefined
+  );
+
+  if (isLoading) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex items-center justify-center h-24">
-          <p className="text-muted-foreground text-sm">Select a job type to configure stage deadlines</p>
+          <p className="text-muted-foreground text-sm">Loading departments...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!jobType || sortedDepartments.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex items-center justify-center h-24">
+          <p className="text-muted-foreground text-sm">Select a job type to configure department deadlines</p>
         </CardContent>
       </Card>
     );
@@ -107,44 +139,44 @@ export default function StageDeadlineAllocation({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
-          Stage Deadline Allocation
+          Department Task Allocation
         </CardTitle>
         <CardDescription>
-          Set the deadline date for each workflow stage. Total workflow span: {getTotalDays()} days
+          Set the deadline date for each department stage. Delete unwanted stages before saving. Total workflow span: {getTotalDays()} days
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {stages.map((stage, index) => (
-          <div key={stage} className="flex items-center gap-4 p-3 rounded-lg border">
+        {activeDepartments.map((department, index) => (
+          <div key={department.id} className="flex items-center gap-4 p-3 rounded-lg border">
             <div className="flex-1">
-              <Label htmlFor={`stage-${stage}`} className="text-sm font-medium">
-                {stage}
+              <Label htmlFor={`dept-${department.id}`} className="text-sm font-medium">
+                {department.name}
               </Label>
               <div className="flex items-center gap-2 mt-1">
                 <Clock className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">
-                  {stageDeadlines[stage] ? `Due: ${new Date(stageDeadlines[stage]).toLocaleDateString()}` : 'No deadline set'}
+                  {stageDeadlines[department.id] ? `Due: ${new Date(stageDeadlines[department.id]).toLocaleDateString()}` : 'No deadline set'}
                 </span>
               </div>
             </div>
             
             <div className="flex items-center gap-2">
               <Input
-                id={`stage-${stage}`}
+                id={`dept-${department.id}`}
                 type="date"
-                value={formatDateForInput(stageDeadlines[stage])}
-                onChange={(e) => handleDeadlineChange(stage, e.target.value)}
+                value={formatDateForInput(stageDeadlines[department.id])}
+                onChange={(e) => handleDeadlineChange(department.id, e.target.value)}
                 max={new Date(deliveryDeadline).toISOString().split('T')[0]}
                 className="w-40"
-                data-testid={`input-stage-deadline-${stage.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                data-testid={`input-dept-deadline-${department.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
               />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleStageDelete(stage)}
+                onClick={() => handleDepartmentDelete(department.id)}
                 className="text-destructive hover:text-destructive"
-                data-testid={`button-delete-stage-${stage.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                data-testid={`button-delete-dept-${department.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
