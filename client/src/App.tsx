@@ -116,7 +116,7 @@ function AuthenticatedApp() {
   );
 }
 
-function App() {
+function AppContent() {
   const [location] = useLocation();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/me'],
@@ -125,30 +125,25 @@ function App() {
 
   if (isLoading) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      </QueryClientProvider>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
     );
   }
 
   // Show login page if not authenticated
   if (!user && location !== '/login') {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Login />
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
+    return <Login />;
   }
 
+  return <AuthenticatedApp />;
+}
+
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthenticatedApp />
+        <AppContent />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

@@ -29,14 +29,10 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-// Helper to determine if employee is admin (first employee in system)
-export async function isAdmin(employee: Employee, allEmployees: Employee[]): Promise<boolean> {
-  // Admin is the first employee created (lowest createdAt or specific check)
-  // For simplicity, we'll check if email contains 'admin' or is the first employee
-  return employee.email.toLowerCase().includes('admin');
-}
-
-// Helper to get user role
+// Helper to get user role from employee record
 export function getUserRole(employee: Employee): 'admin' | 'employee' {
-  return employee.email.toLowerCase().includes('admin') ? 'admin' : 'employee';
+  // Use the role field from the database, defaulting to 'employee' for safety
+  return (employee.role === 'admin' || employee.role === 'employee') 
+    ? employee.role as 'admin' | 'employee'
+    : 'employee';
 }

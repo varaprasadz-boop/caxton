@@ -32,6 +32,7 @@ export const employees = pgTable("employees", {
   email: text("email").notNull().unique(), // Email is username, must be unique
   phone: text("phone"),
   passwordHash: text("password_hash"), // Hashed password for login
+  role: text("role").notNull().default("employee"), // 'admin' or 'employee'
 });
 
 // Machines table
