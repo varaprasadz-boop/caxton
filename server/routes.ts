@@ -498,6 +498,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientMap = new Map(clients.map(c => [c.id, c]));
       const employeeMap = new Map(employees.map(e => [e.id, e]));
       
+      const departments = await storage.getDepartments();
+      const departmentMap = new Map(departments.map((d: any) => [d.id, d]));
+      
       const alerts = [];
       
       // Check jobs
@@ -524,16 +527,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (task.status !== "completed") {
           const deadline = new Date(task.deadline);
           const employee = task.employeeId ? employeeMap.get(task.employeeId) : null;
+          const department = departmentMap.get(task.departmentId);
           
           if (deadline <= threeDaysFromNow) {
             alerts.push({
               id: task.id,
-              title: `Task: ${task.stage}`,
+              title: `Task: ${department?.name || "Unknown"}`,
               type: "task",
               employee: employee?.name,
               deadline,
               status: task.status,
-              stage: task.stage
+              stage: department?.name || "Unknown"
             });
           }
         }
@@ -557,6 +561,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientMap = new Map(clients.map(c => [c.id, c]));
       const employeeMap = new Map(employees.map(e => [e.id, e]));
       const jobMap = new Map(jobs.map(j => [j.id, j]));
+      
+      const departments = await storage.getDepartments();
+      const departmentMap = new Map(departments.map((d: any) => [d.id, d]));
       
       const activities = [];
       
@@ -592,16 +599,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const job = jobMap.get(task.jobId);
         const client = job ? clientMap.get(job.clientId) : null;
         const employee = task.employeeId ? employeeMap.get(task.employeeId) : null;
+        const department = departmentMap.get(task.departmentId);
         
         activities.push({
           id: `task-${task.id}`,
           type: "task_completed",
-          title: `Task completed: ${task.stage}`,
+          title: `Task completed: ${department?.name || "Unknown"}`,
           description: `Job: ${job?.jobType || "Unknown"} • ${client?.name || "Unknown Client"}`,
           timestamp: task.updatedAt || task.createdAt || new Date(), // Use updatedAt for completion time
           metadata: {
             taskId: task.id,
-            stage: task.stage,
+            stage: department?.name || "Unknown",
             employee: employee?.name,
             jobType: job?.jobType
           }
@@ -657,9 +665,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as Record<string, number>);
       
-      // Stage distribution
+      // Department distribution (formerly stage stats)
+      const departments = await storage.getDepartments();
+      const departmentMap = new Map(departments.map((d: any) => [d.id, d]));
       const stageStats = tasks.reduce((acc, task) => {
-        acc[task.stage] = (acc[task.stage] || 0) + 1;
+        const deptName = departmentMap.get(task.departmentId)?.name || "Unknown";
+        acc[deptName] = (acc[deptName] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
       
@@ -668,11 +679,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assignedTasks = tasks.filter(task => task.employeeId === employee.id);
         const activeTasks = assignedTasks.filter(task => task.status !== "completed");
         const completedTasks = assignedTasks.filter(task => task.status === "completed");
+        const department = employee.departmentId ? departmentMap.get(employee.departmentId) : null;
         
         return {
           employeeId: employee.id,
           name: employee.name,
-          role: employee.role,
+          role: department?.name || "Unassigned",
           activeTasks: activeTasks.length,
           completedTasks: completedTasks.length,
           totalTasks: assignedTasks.length
@@ -699,27 +711,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Utility function to generate workflow tasks
   async function generateJobTasks(jobId: string, jobType: string, deadline: Date, stageDeadlines?: any) {
-    const workflowStages = getAllWorkflowStages(); // Now all jobs get all stages
+    const departments = await storage.getDepartments();
     const deliveryDate = new Date(deadline);
     
-    for (let i = 0; i < workflowStages.length; i++) {
-      const stage = workflowStages[i]; // Now a plain string
+    for (let i = 0; i < departments.length; i++) {
+      const department = departments[i];
       let taskDeadline: Date;
       
-      if (stageDeadlines && stageDeadlines[stage]) {
+      if (stageDeadlines && stageDeadlines[department.id]) {
         // Use custom stage deadline if provided
-        taskDeadline = new Date(stageDeadlines[stage]);
+        taskDeadline = new Date(stageDeadlines[department.id]);
       } else {
-        // Fallback to default: evenly distribute stages between now and delivery
+        // Fallback to default: evenly distribute departments between now and delivery
         const now = new Date();
         const totalDays = Math.max(1, Math.ceil((deliveryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-        const daysBetweenStages = Math.max(1, Math.floor(totalDays / workflowStages.length));
+        const daysBetweenStages = Math.max(1, Math.floor(totalDays / departments.length));
         taskDeadline = new Date(now.getTime() + (i + 1) * daysBetweenStages * 24 * 60 * 60 * 1000);
       }
       
       await storage.createTask({
         jobId,
-        stage: stage, // Now using plain string
+        departmentId: department.id,
         deadline: taskDeadline,
         status: "pending",
         order: i + 1,
