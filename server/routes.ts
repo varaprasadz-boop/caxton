@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { uploadMiddleware, handleFileUpload } from "./upload";
+import { requireAuth, requireAdmin, getUserRole } from "./auth";
 import fs from 'fs';
 import path from 'path';
 import { Client } from '@replit/object-storage';
@@ -19,8 +20,83 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
+      // Find employee by email
+      const employees = await storage.getEmployees();
+      const employee = employees.find(emp => emp.email.toLowerCase() === email.toLowerCase());
+      
+      if (!employee) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Check if employee has a password
+      if (!employee.passwordHash) {
+        return res.status(401).json({ error: "No password set for this account. Please contact admin." });
+      }
+      
+      // Verify password
+      const passwordMatch = await bcrypt.compare(password, employee.passwordHash);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Create session
+      const userRole = getUserRole(employee);
+      req.session.userId = employee.id;
+      req.session.userEmail = employee.email;
+      req.session.userRole = userRole;
+      
+      res.json({
+        id: employee.id,
+        name: employee.name,
+        email: employee.email,
+        departmentId: employee.departmentId,
+        role: userRole
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+  
+  app.post("/api/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+  
+  app.get("/api/me", requireAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployee(req.session.userId!);
+      if (!employee) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json({
+        id: employee.id,
+        name: employee.name,
+        email: employee.email,
+        departmentId: employee.departmentId,
+        role: req.session.userRole
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user info" });
+    }
+  });
+  
   // File upload route
-  app.post("/api/upload", uploadMiddleware, handleFileUpload);
+  app.post("/api/upload", requireAuth, uploadMiddleware, handleFileUpload);
 
   // File serving route for PO files (local fallback) - SECURE
   app.get("/files/:filename", async (req, res) => {
@@ -120,8 +196,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clients routes
-  app.get("/api/clients", async (req, res) => {
+  // Clients routes (Admin only for modifications, all authenticated users can view)
+  app.get("/api/clients", requireAuth, async (req, res) => {
     try {
       const clients = await storage.getClients();
       res.json(clients);
@@ -142,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients", async (req, res) => {
+  app.post("/api/clients", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertClientSchema.parse(req.body);
       const client = await storage.createClient(validatedData);
@@ -155,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/clients/:id", async (req, res) => {
+  app.patch("/api/clients/:id", requireAdmin, async (req, res) => {
     try {
       const updates = insertClientSchema.partial().parse(req.body);
       const client = await storage.updateClient(req.params.id, updates);
@@ -171,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/clients/:id", async (req, res) => {
+  app.delete("/api/clients/:id", requireAdmin, async (req, res) => {
     try {
       const deleted = await storage.deleteClient(req.params.id);
       if (!deleted) {
@@ -184,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Departments routes
-  app.get("/api/departments", async (req, res) => {
+  app.get("/api/departments", requireAuth, async (req, res) => {
     try {
       const departments = await storage.getDepartments();
       res.json(departments);
@@ -205,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/departments", async (req, res) => {
+  app.post("/api/departments", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertDepartmentSchema.parse(req.body);
       const department = await storage.createDepartment(validatedData);
@@ -247,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Employees routes
-  app.get("/api/employees", async (req, res) => {
+  app.get("/api/employees", requireAuth, async (req, res) => {
     try {
       const employees = await storage.getEmployees();
       res.json(employees);
@@ -268,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/employees", async (req, res) => {
+  app.post("/api/employees", requireAdmin, async (req, res) => {
     try {
       const { password, ...employeeData } = req.body;
       const validatedData = insertEmployeeSchema.parse(employeeData);
@@ -339,7 +415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Machines routes
-  app.get("/api/machines", async (req, res) => {
+  app.get("/api/machines", requireAuth, async (req, res) => {
     try {
       const machines = await storage.getMachines();
       res.json(machines);
@@ -360,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/machines", async (req, res) => {
+  app.post("/api/machines", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertMachineSchema.parse(req.body);
       const machine = await storage.createMachine(validatedData);
@@ -503,8 +579,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Jobs routes
-  app.get("/api/jobs", async (req, res) => {
+  // Jobs routes (All authenticated users can view jobs, only admin can modify)
+  app.get("/api/jobs", requireAuth, async (req, res) => {
     try {
       const jobs = await storage.getJobs();
       res.json(jobs);
@@ -525,7 +601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/jobs", async (req, res) => {
+  app.post("/api/jobs", requireAdmin, async (req, res) => {
     try {
       // Handle date string conversion for API compatibility
       const requestData = { ...req.body };
@@ -565,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/jobs/:id", async (req, res) => {
+  app.patch("/api/jobs/:id", requireAdmin, async (req, res) => {
     try {
       // Handle date string conversion for API compatibility
       const requestData = { ...req.body };
@@ -591,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tasks routes
-  app.get("/api/tasks", async (req, res) => {
+  app.get("/api/tasks", requireAuth, async (req, res) => {
     try {
       const { jobId } = req.query;
       let tasks;
@@ -601,6 +677,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         tasks = await storage.getTasks();
       }
+      
+      // Filter tasks based on user role
+      if (req.session.userRole === 'employee') {
+        // Employees only see their assigned tasks
+        tasks = tasks.filter(task => task.employeeId === req.session.userId);
+      }
+      // Admins see all tasks
       
       res.json(tasks);
     } catch (error) {
@@ -650,7 +733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/tasks/:id", async (req, res) => {
+  app.patch("/api/tasks/:id", requireAuth, async (req, res) => {
     try {
       const { status, employeeId, remarks } = req.body;
       
@@ -658,6 +741,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentTask = await storage.getTask(req.params.id);
       if (!currentTask) {
         return res.status(404).json({ error: "Task not found" });
+      }
+      
+      // Permission check: Employees can only update their own assigned tasks
+      if (req.session.userRole === 'employee') {
+        if (currentTask.employeeId !== req.session.userId) {
+          return res.status(403).json({ 
+            error: "Permission denied", 
+            details: "You can only update tasks assigned to you"
+          });
+        }
+        
+        // Employees can only update status and remarks, not reassign
+        if (employeeId !== undefined && employeeId !== currentTask.employeeId) {
+          return res.status(403).json({ 
+            error: "Permission denied", 
+            details: "You cannot reassign tasks"
+          });
+        }
       }
       
       // Prevent status or assignment changes for in-queue tasks
