@@ -772,7 +772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         jobId,
         departmentId: department.id,
         deadline: taskDeadline,
-        status: "pending",
+        status: i === 0 ? "pending" : "in-queue", // First task is pending, rest are in-queue
         order: i + 1,
         employeeId: assignedEmployee?.id || null,
         remarks: null
