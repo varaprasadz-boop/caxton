@@ -337,6 +337,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin credential update route
+  app.post("/api/admin/update-credentials", async (req, res) => {
+    try {
+      // Validate and sanitize input
+      const adminCredentialsSchema = z.object({
+        currentEmail: z.string().email("Invalid current email"),
+        newEmail: z.preprocess(
+          val => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+          z.string().email("Invalid new email").optional()
+        ),
+        currentPassword: z.string().min(1, "Current password is required"),
+        newPassword: z.preprocess(
+          val => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+          z.string().min(6, "New password must be at least 6 characters").optional()
+        ),
+        confirmPassword: z.preprocess(
+          val => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+          z.string().optional()
+        )
+      }).refine((data) => {
+        if (data.newPassword && data.newPassword !== data.confirmPassword) {
+          return false;
+        }
+        return true;
+      }, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"]
+      });
+
+      const validatedData = adminCredentialsSchema.parse(req.body);
+      const { currentEmail, newEmail, currentPassword, newPassword } = validatedData;
+
+      // Find employee by current email
+      const employees = await storage.getEmployees();
+      const adminEmployee = employees.find(emp => emp.email === currentEmail);
+
+      if (!adminEmployee) {
+        return res.status(404).json({ error: "Admin account not found" });
+      }
+
+      // Verify current password
+      if (!adminEmployee.passwordHash) {
+        return res.status(400).json({ error: "Admin account has no password set" });
+      }
+
+      const passwordMatch = await bcrypt.compare(currentPassword, adminEmployee.passwordHash);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // Prepare updates
+      const updates: any = {};
+      
+      if (newEmail && newEmail !== currentEmail) {
+        // Check if new email is already in use
+        const emailExists = employees.find(emp => emp.email === newEmail && emp.id !== adminEmployee.id);
+        if (emailExists) {
+          return res.status(400).json({ error: "Email already in use" });
+        }
+        updates.email = newEmail;
+      }
+
+      if (newPassword) {
+        updates.passwordHash = await bcrypt.hash(newPassword, 10);
+      }
+
+      // Ensure at least one field is being updated
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No changes to update" });
+      }
+
+      // Update employee
+      await storage.updateEmployee(adminEmployee.id, updates);
+
+      res.json({ message: "Credentials updated successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      console.error("Admin credential update error:", error);
+      res.status(500).json({ error: "Failed to update admin credentials" });
+    }
+  });
+
   // Jobs routes
   app.get("/api/jobs", async (req, res) => {
     try {
