@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertJobSchema, type InsertJob, type Job, type Client, type Machine, JOB_TYPES, type StageDeadlines, getDefaultStageDeadlines } from "@shared/schema";
+import { insertJobSchema, type InsertJob, type Job, type Client, type Machine, type Department, JOB_TYPES, type StageDeadlines, getDefaultStageDeadlines } from "@shared/schema";
 import { z } from "zod";
 import { Calendar, User } from "lucide-react";
 import StageDeadlineAllocation from "./StageTimeAllocation";
@@ -40,7 +40,7 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch clients and machines for the dropdowns
+  // Fetch clients, machines, and departments for the dropdowns
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"]
   });
@@ -48,6 +48,20 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
   const { data: machines = [] } = useQuery<Machine[]>({
     queryKey: ["/api/machines"]
   });
+
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"]
+  });
+
+  // Group machines by department
+  const machinesByDepartment = machines.reduce((acc, machine) => {
+    const deptId = machine.departmentId;
+    if (!acc[deptId]) {
+      acc[deptId] = [];
+    }
+    acc[deptId].push(machine);
+    return acc;
+  }, {} as Record<string, Machine[]>);
 
   const mutation = useMutation({
     mutationFn: async (data: InsertJob) => {
@@ -329,23 +343,35 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
           {machines.length > 0 && (
             <div className="space-y-3">
               <Label>Select Machines (Optional)</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {machines.map((machine) => (
-                  <div key={machine.id} className="flex items-center space-x-2" data-testid={`checkbox-container-machine-${machine.id}`}>
-                    <Checkbox
-                      id={`machine-${machine.id}`}
-                      checked={(formData.machineIds || []).includes(machine.id)}
-                      onCheckedChange={() => toggleMachine(machine.id)}
-                      data-testid={`checkbox-machine-${machine.id}`}
-                    />
-                    <Label
-                      htmlFor={`machine-${machine.id}`}
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      {machine.name}
-                    </Label>
-                  </div>
-                ))}
+              <div className="space-y-4">
+                {departments.map((dept) => {
+                  const deptMachines = machinesByDepartment[dept.id] || [];
+                  if (deptMachines.length === 0) return null;
+                  
+                  return (
+                    <div key={dept.id} className="space-y-2" data-testid={`department-group-${dept.id}`}>
+                      <h4 className="text-sm font-medium text-muted-foreground">{dept.name}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-4">
+                        {deptMachines.map((machine) => (
+                          <div key={machine.id} className="flex items-center space-x-2" data-testid={`checkbox-container-machine-${machine.id}`}>
+                            <Checkbox
+                              id={`machine-${machine.id}`}
+                              checked={(formData.machineIds || []).includes(machine.id)}
+                              onCheckedChange={() => toggleMachine(machine.id)}
+                              data-testid={`checkbox-machine-${machine.id}`}
+                            />
+                            <Label
+                              htmlFor={`machine-${machine.id}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {machine.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               {(formData.machineIds || []).length > 0 && (
                 <p className="text-xs text-muted-foreground" data-testid="text-selected-machines-count">
