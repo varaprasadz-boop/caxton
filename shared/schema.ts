@@ -29,8 +29,9 @@ export const employees = pgTable("employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   departmentId: varchar("department_id"), // Reference to departments
-  email: text("email").notNull(),
+  email: text("email").notNull().unique(), // Email is username, must be unique
   phone: text("phone"),
+  passwordHash: text("password_hash"), // Hashed password for login
 });
 
 // Jobs table

@@ -165,7 +165,8 @@ export class MemStorage implements IStorage {
       ...insertEmployee, 
       id,
       phone: insertEmployee.phone || null,
-      departmentId: insertEmployee.departmentId || null
+      departmentId: insertEmployee.departmentId || null,
+      passwordHash: insertEmployee.passwordHash || null
     };
     this.employees.set(id, employee);
     return employee;

@@ -5,6 +5,7 @@ import { uploadMiddleware, handleFileUpload } from "./upload";
 import fs from 'fs';
 import path from 'path';
 import { Client } from '@replit/object-storage';
+import bcrypt from 'bcrypt';
 import { 
   insertClientSchema, 
   insertDepartmentSchema,
@@ -267,9 +268,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/employees", async (req, res) => {
     try {
-      const validatedData = insertEmployeeSchema.parse(req.body);
-      const employee = await storage.createEmployee(validatedData);
-      res.status(201).json(employee);
+      const { password, ...employeeData } = req.body;
+      const validatedData = insertEmployeeSchema.parse(employeeData);
+      
+      // Hash password if provided
+      let passwordHash: string | undefined;
+      if (password) {
+        passwordHash = await bcrypt.hash(password, 10);
+      }
+      
+      const employee = await storage.createEmployee({
+        ...validatedData,
+        passwordHash
+      });
+      
+      // Don't send password hash back to client
+      const { passwordHash: _, ...employeeResponse } = employee;
+      res.status(201).json(employeeResponse);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid employee data", details: error.errors });
@@ -280,12 +295,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/employees/:id", async (req, res) => {
     try {
-      const updates = insertEmployeeSchema.partial().parse(req.body);
-      const employee = await storage.updateEmployee(req.params.id, updates);
+      const { password, ...employeeData } = req.body;
+      const updates = insertEmployeeSchema.partial().parse(employeeData);
+      
+      // Hash password if provided for update
+      let passwordHash: string | undefined;
+      if (password) {
+        passwordHash = await bcrypt.hash(password, 10);
+      }
+      
+      const employee = await storage.updateEmployee(req.params.id, {
+        ...updates,
+        ...(passwordHash && { passwordHash })
+      });
+      
       if (!employee) {
         return res.status(404).json({ error: "Employee not found" });
       }
-      res.json(employee);
+      
+      // Don't send password hash back to client
+      const { passwordHash: _, ...employeeResponse } = employee;
+      res.json(employeeResponse);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid employee data", details: error.errors });

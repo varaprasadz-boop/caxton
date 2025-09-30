@@ -1,6 +1,7 @@
 import { useState } from "react";
 import EmployeeCard from "@/components/EmployeeCard";
 import CreateEmployeeForm from "@/components/CreateEmployeeForm";
+import EditEmployeeForm from "@/components/EditEmployeeForm";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [isCreateEmployeeModalOpen, setIsCreateEmployeeModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   // Fetch real data
   const { data: employees = [] } = useQuery<Employee[]>({
@@ -53,7 +55,10 @@ export default function Employees() {
   };
 
   const handleEditEmployee = (id: string) => {
-    console.log('Editing employee:', id);
+    const employee = employees.find(emp => emp.id === id);
+    if (employee) {
+      setEditingEmployee(employee);
+    }
   };
 
   const handleSearch = (value: string) => {
@@ -180,6 +185,21 @@ export default function Employees() {
           onCancel={() => setIsCreateEmployeeModalOpen(false)}
         />
       </Modal>
+
+      {/* Edit Employee Modal */}
+      {editingEmployee && (
+        <Modal
+          isOpen={!!editingEmployee}
+          onClose={() => setEditingEmployee(null)}
+          title="Edit Employee"
+        >
+          <EditEmployeeForm 
+            employee={editingEmployee}
+            onSuccess={() => setEditingEmployee(null)}
+            onCancel={() => setEditingEmployee(null)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

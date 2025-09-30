@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,20 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertEmployeeSchema, type InsertEmployee, type Department } from "@shared/schema";
+import { insertEmployeeSchema, type InsertEmployee, type Department, type Employee } from "@shared/schema";
 import { z } from "zod";
 
-interface CreateEmployeeFormProps {
+interface EditEmployeeFormProps {
+  employee: Employee;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmployeeFormProps) {
+export default function EditEmployeeForm({ employee, onSuccess, onCancel }: EditEmployeeFormProps) {
   const [formData, setFormData] = useState<InsertEmployee & { password?: string }>({
-    name: "",
-    departmentId: "",
-    email: "",
-    phone: "",
+    name: employee.name,
+    departmentId: employee.departmentId || "",
+    email: employee.email,
+    phone: employee.phone || "",
     password: ""
   });
 
@@ -33,23 +34,23 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
     queryKey: ["/api/departments"]
   });
 
-  const createEmployeeMutation = useMutation({
+  const updateEmployeeMutation = useMutation({
     mutationFn: async (data: InsertEmployee & { password?: string }) => {
-      const res = await apiRequest("POST", "/api/employees", data);
+      const res = await apiRequest("PATCH", `/api/employees/${employee.id}`, data);
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
       toast({
-        title: "Employee added",
-        description: "New team member has been added successfully.",
+        title: "Employee updated",
+        description: "Employee information has been updated successfully.",
       });
       onSuccess?.();
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to add employee.",
+        description: error.message || "Failed to update employee.",
         variant: "destructive",
       });
     }
@@ -60,8 +61,15 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
     setErrors({});
 
     try {
-      const validatedData = insertEmployeeSchema.parse(formData);
-      createEmployeeMutation.mutate(validatedData);
+      const { password, ...employeeData } = formData;
+      const validatedData = insertEmployeeSchema.parse(employeeData);
+      
+      // Only include password if it was changed
+      const dataToSend = password 
+        ? { ...validatedData, password }
+        : validatedData;
+      
+      updateEmployeeMutation.mutate(dataToSend);
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
@@ -75,7 +83,7 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
     }
   };
 
-  const handleChange = (field: keyof InsertEmployee) => (
+  const handleChange = (field: keyof (InsertEmployee & { password?: string })) => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
@@ -92,11 +100,11 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
   };
 
   return (
-    <Card className="w-full max-w-2xl" data-testid="card-create-employee">
+    <Card className="w-full max-w-2xl" data-testid="card-edit-employee">
       <CardHeader>
-        <CardTitle>Add New Employee</CardTitle>
+        <CardTitle>Edit Employee</CardTitle>
         <CardDescription>
-          Add a team member to assign tasks and track productivity
+          Update employee information and reset password if needed
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -169,30 +177,30 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password (for employee login)</Label>
+            <Label htmlFor="password">New Password (leave blank to keep current)</Label>
             <Input
               id="password"
               type="password"
               value={formData.password || ""}
               onChange={handleChange("password")}
-              placeholder="Enter secure password"
+              placeholder="Enter new password to reset"
               data-testid="input-employee-password"
             />
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Username will be the employee's email address
+              Only enter a password if you want to reset it
             </p>
           </div>
 
           <div className="flex gap-2 pt-4">
             <Button
               type="submit"
-              disabled={createEmployeeMutation.isPending}
+              disabled={updateEmployeeMutation.isPending}
               data-testid="button-submit-employee"
             >
-              {createEmployeeMutation.isPending ? "Adding..." : "Add Employee"}
+              {updateEmployeeMutation.isPending ? "Updating..." : "Update Employee"}
             </Button>
             {onCancel && (
               <Button
