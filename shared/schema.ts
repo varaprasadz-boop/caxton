@@ -34,6 +34,15 @@ export const employees = pgTable("employees", {
   passwordHash: text("password_hash"), // Hashed password for login
 });
 
+// Machines table
+export const machines = pgTable("machines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  departmentId: varchar("department_id").notNull(), // Reference to departments
+  description: text("description"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Jobs table
 export const jobs = pgTable("jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -47,6 +56,7 @@ export const jobs = pgTable("jobs", {
   deadline: timestamp("deadline").notNull(),
   stageDeadlines: json("stage_deadlines"), // JSON object with stage names and deadline dates
   poFileUrl: text("po_file_url"), // URL to uploaded PO file in object storage
+  machineIds: text("machine_ids").array(), // Array of machine IDs selected for this job
   status: text("status").notNull().default("pending"), // pending, pre-press, printing, cutting, folding, binding, qc, packaging, dispatch, delivered, completed
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -73,10 +83,12 @@ export const stageDeadlinesSchema = z.record(z.string(), z.string().datetime());
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
+export const insertMachineSchema = createInsertSchema(machines).omit({ id: true, createdAt: true });
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true }).extend({
   status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional(),
   stageDeadlines: stageDeadlinesSchema.optional(),
-  poFileUrl: z.string().min(1).optional() // Allow relative URLs for local file storage
+  poFileUrl: z.string().min(1).optional(), // Allow relative URLs for local file storage
+  machineIds: z.array(z.string()).optional() // Array of machine IDs
 });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true }).extend({
   status: z.enum(["pending", "in-queue", "in-progress", "completed", "delayed"]).optional(),
@@ -90,6 +102,8 @@ export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Department = typeof departments.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
+export type InsertMachine = z.infer<typeof insertMachineSchema>;
+export type Machine = typeof machines.$inferSelect;
 export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;

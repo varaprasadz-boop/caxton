@@ -9,7 +9,8 @@ import bcrypt from 'bcrypt';
 import { 
   insertClientSchema, 
   insertDepartmentSchema,
-  insertEmployeeSchema, 
+  insertEmployeeSchema,
+  insertMachineSchema,
   insertJobSchema, 
   insertTaskSchema,
   JOB_TYPES,
@@ -334,6 +335,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete employee" });
+    }
+  });
+
+  // Machines routes
+  app.get("/api/machines", async (req, res) => {
+    try {
+      const machines = await storage.getMachines();
+      res.json(machines);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch machines" });
+    }
+  });
+
+  app.get("/api/machines/:id", async (req, res) => {
+    try {
+      const machine = await storage.getMachine(req.params.id);
+      if (!machine) {
+        return res.status(404).json({ error: "Machine not found" });
+      }
+      res.json(machine);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch machine" });
+    }
+  });
+
+  app.post("/api/machines", async (req, res) => {
+    try {
+      const validatedData = insertMachineSchema.parse(req.body);
+      const machine = await storage.createMachine(validatedData);
+      res.status(201).json(machine);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid machine data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create machine" });
+    }
+  });
+
+  app.patch("/api/machines/:id", async (req, res) => {
+    try {
+      const updates = insertMachineSchema.partial().parse(req.body);
+      const machine = await storage.updateMachine(req.params.id, updates);
+      if (!machine) {
+        return res.status(404).json({ error: "Machine not found" });
+      }
+      res.json(machine);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid machine data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update machine" });
+    }
+  });
+
+  app.delete("/api/machines/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteMachine(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Machine not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete machine" });
     }
   });
 

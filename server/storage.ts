@@ -5,6 +5,8 @@ import {
   type InsertDepartment,
   type Employee, 
   type InsertEmployee,
+  type Machine,
+  type InsertMachine,
   type Job,
   type InsertJob,
   type Task,
@@ -12,6 +14,7 @@ import {
   clients,
   departments,
   employees,
+  machines,
   jobs,
   tasks
 } from "@shared/schema";
@@ -44,6 +47,13 @@ export interface IStorage {
   updateEmployee(id: string, updates: Partial<InsertEmployee>): Promise<Employee | undefined>;
   deleteEmployee(id: string): Promise<boolean>;
   
+  // Machines
+  getMachine(id: string): Promise<Machine | undefined>;
+  getMachines(): Promise<Machine[]>;
+  createMachine(machine: InsertMachine): Promise<Machine>;
+  updateMachine(id: string, updates: Partial<InsertMachine>): Promise<Machine | undefined>;
+  deleteMachine(id: string): Promise<boolean>;
+  
   // Jobs
   getJob(id: string): Promise<Job | undefined>;
   getJobs(): Promise<Job[]>;
@@ -62,6 +72,7 @@ export class MemStorage implements IStorage {
   private clients: Map<string, Client>;
   private departments: Map<string, Department>;
   private employees: Map<string, Employee>;
+  private machines: Map<string, Machine>;
   private jobs: Map<string, Job>;
   private tasks: Map<string, Task>;
 
@@ -69,6 +80,7 @@ export class MemStorage implements IStorage {
     this.clients = new Map();
     this.departments = new Map();
     this.employees = new Map();
+    this.machines = new Map();
     this.jobs = new Map();
     this.tasks = new Map();
   }
@@ -187,6 +199,45 @@ export class MemStorage implements IStorage {
 
   async deleteEmployee(id: string): Promise<boolean> {
     return this.employees.delete(id);
+  }
+
+  // Machines
+  async getMachine(id: string): Promise<Machine | undefined> {
+    return this.machines.get(id);
+  }
+
+  async getMachines(): Promise<Machine[]> {
+    return Array.from(this.machines.values());
+  }
+
+  async createMachine(insertMachine: InsertMachine): Promise<Machine> {
+    const id = randomUUID();
+    const createdAt = new Date();
+    const machine: Machine = { 
+      ...insertMachine, 
+      id,
+      createdAt,
+      description: insertMachine.description || null
+    };
+    this.machines.set(id, machine);
+    return machine;
+  }
+
+  async updateMachine(id: string, updates: Partial<InsertMachine>): Promise<Machine | undefined> {
+    const machine = this.machines.get(id);
+    if (!machine) return undefined;
+    
+    const updatedMachine: Machine = { 
+      ...machine, 
+      ...updates,
+      description: updates.description !== undefined ? updates.description : machine.description
+    };
+    this.machines.set(id, updatedMachine);
+    return updatedMachine;
+  }
+
+  async deleteMachine(id: string): Promise<boolean> {
+    return this.machines.delete(id);
   }
 
   // Jobs
@@ -351,6 +402,31 @@ export class PostgreSQLStorage implements IStorage {
 
   async deleteEmployee(id: string): Promise<boolean> {
     const result = await db.delete(employees).where(eq(employees.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Machines
+  async getMachine(id: string): Promise<Machine | undefined> {
+    const result = await db.select().from(machines).where(eq(machines.id, id));
+    return result[0] || undefined;
+  }
+
+  async getMachines(): Promise<Machine[]> {
+    return await db.select().from(machines);
+  }
+
+  async createMachine(insertMachine: InsertMachine): Promise<Machine> {
+    const result = await db.insert(machines).values(insertMachine).returning();
+    return result[0];
+  }
+
+  async updateMachine(id: string, updates: Partial<InsertMachine>): Promise<Machine | undefined> {
+    const result = await db.update(machines).set(updates).where(eq(machines.id, id)).returning();
+    return result[0] || undefined;
+  }
+
+  async deleteMachine(id: string): Promise<boolean> {
+    const result = await db.delete(machines).where(eq(machines.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 
