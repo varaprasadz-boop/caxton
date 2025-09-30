@@ -12,7 +12,8 @@ import {
   insertEmployeeSchema, 
   insertJobSchema, 
   insertTaskSchema,
-  JOB_TYPES
+  JOB_TYPES,
+  type Task
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -490,6 +491,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!task) {
         return res.status(404).json({ error: "Task not found" });
       }
+      
+      // Auto-advance next task when current task is completed
+      if (status === "completed") {
+        const allJobTasks = await storage.getTasksByJobId(task.jobId);
+        // Find the next task by order
+        const nextTask = allJobTasks.find((t: Task) => t.order === task.order + 1 && t.status === "in-queue");
+        
+        if (nextTask) {
+          // Advance next task from in-queue to pending
+          await storage.updateTask(nextTask.id, { status: "pending" });
+        }
+      }
+      
       res.json(task);
     } catch (error) {
       res.status(500).json({ error: "Failed to update task" });
