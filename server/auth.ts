@@ -13,7 +13,7 @@ declare module 'express-session' {
 // Middleware to check if user is authenticated
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
-    return res.status(401).json({ error: "Authentication required" });
+    return res.status(401).json({ error: "User Authentication required" });
   }
   next();
 }
@@ -21,7 +21,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 // Middleware to check if user is admin
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
-    return res.status(401).json({ error: "Authentication required" });
+    return res.status(401).json({ error: "Admin Authentication required" });
   }
   if (req.session.userRole !== 'admin') {
     return res.status(403).json({ error: "Admin access required" });
