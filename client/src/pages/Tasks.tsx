@@ -4,15 +4,56 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Task, Employee, Job, Client } from "@shared/schema";
+
+// Helper functions for date filtering
+const getDateRanges = () => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  // Today
+  const todayStart = new Date(today);
+  const todayEnd = new Date(today);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+  
+  // This Week (Monday to Sunday)
+  const dayOfWeek = now.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // If Sunday, go back 6 days
+  const thisWeekStart = new Date(today);
+  thisWeekStart.setDate(today.getDate() + mondayOffset);
+  const thisWeekEnd = new Date(thisWeekStart);
+  thisWeekEnd.setDate(thisWeekStart.getDate() + 7);
+  
+  // Next Week
+  const nextWeekStart = new Date(thisWeekEnd);
+  const nextWeekEnd = new Date(nextWeekStart);
+  nextWeekEnd.setDate(nextWeekStart.getDate() + 7);
+  
+  // This Month
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  
+  return {
+    today: { start: todayStart, end: todayEnd },
+    thisWeek: { start: thisWeekStart, end: thisWeekEnd },
+    nextWeek: { start: nextWeekStart, end: nextWeekEnd },
+    thisMonth: { start: thisMonthStart, end: thisMonthEnd }
+  };
+};
+
+const isTaskInDateRange = (taskDeadline: string | Date, range: { start: Date, end: Date }) => {
+  const deadline = typeof taskDeadline === 'string' ? new Date(taskDeadline) : taskDeadline;
+  return deadline >= range.start && deadline < range.end;
+};
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [stageFilter, setStageFilter] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState("all");
+  const [dateRangeFilter, setDateRangeFilter] = useState("all");
 
   // Fetch data
   const { data: tasks = [] } = useQuery<Task[]>({
@@ -49,6 +90,9 @@ export default function Tasks() {
     };
   });
 
+  // Get date ranges
+  const dateRanges = getDateRanges();
+
   // Filter tasks
   const filteredTasks = enhancedTasks.filter(task => {
     const matchesSearch = task.stage.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -57,8 +101,27 @@ export default function Tasks() {
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;
     const matchesStage = stageFilter === "all" || task.stage === stageFilter;
     const matchesEmployee = employeeFilter === "all" || task.employeeId === employeeFilter;
+    
+    // Date range filter
+    let matchesDateRange = true;
+    if (dateRangeFilter !== "all") {
+      switch (dateRangeFilter) {
+        case "today":
+          matchesDateRange = isTaskInDateRange(task.deadline, dateRanges.today);
+          break;
+        case "this-week":
+          matchesDateRange = isTaskInDateRange(task.deadline, dateRanges.thisWeek);
+          break;
+        case "next-week":
+          matchesDateRange = isTaskInDateRange(task.deadline, dateRanges.nextWeek);
+          break;
+        case "this-month":
+          matchesDateRange = isTaskInDateRange(task.deadline, dateRanges.thisMonth);
+          break;
+      }
+    }
 
-    return matchesSearch && matchesStatus && matchesStage && matchesEmployee;
+    return matchesSearch && matchesStatus && matchesStage && matchesEmployee && matchesDateRange;
   });
 
   // Separate tasks by status
@@ -158,6 +221,20 @@ export default function Tasks() {
                 {employee.name}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+          <SelectTrigger className="w-40" data-testid="select-date-range">
+            <Calendar className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Date Range" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Dates</SelectItem>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="this-week">This Week</SelectItem>
+            <SelectItem value="next-week">Next Week</SelectItem>
+            <SelectItem value="this-month">This Month</SelectItem>
           </SelectContent>
         </Select>
       </div>

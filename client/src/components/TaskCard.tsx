@@ -46,7 +46,7 @@ export default function TaskCard({
   const queryClient = useQueryClient();
 
   const assignTaskMutation = useMutation({
-    mutationFn: async ({ employeeId }: { employeeId: string }) => {
+    mutationFn: async ({ employeeId }: { employeeId: string | null }) => {
       const res = await apiRequest("PATCH", `/api/tasks/${id}`, { employeeId });
       return await res.json();
     },
@@ -90,7 +90,9 @@ export default function TaskCard({
   });
 
   const handleAssignEmployee = (selectedEmployeeId: string) => {
-    assignTaskMutation.mutate({ employeeId: selectedEmployeeId });
+    // Handle "unassigned" value - set employeeId to null in the database
+    const employeeIdValue = selectedEmployeeId === "unassigned" ? null : selectedEmployeeId;
+    assignTaskMutation.mutate({ employeeId: employeeIdValue });
     onAssign?.(id, selectedEmployeeId);
   };
 
@@ -132,7 +134,7 @@ export default function TaskCard({
             <span className="text-sm">Assigned to:</span>
           </div>
           <Select
-            value={employeeId || ""}
+            value={employeeId || "unassigned"}
             onValueChange={handleAssignEmployee}
             disabled={assignTaskMutation.isPending}
           >
@@ -140,7 +142,7 @@ export default function TaskCard({
               <SelectValue placeholder="Unassigned" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Unassigned</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
               {employees.map((employee) => (
                 <SelectItem key={employee.id} value={employee.id}>
                   {employee.name} - {employee.role}
