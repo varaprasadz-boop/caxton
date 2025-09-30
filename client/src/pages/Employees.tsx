@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import EmployeeCard from "@/components/EmployeeCard";
 import CreateEmployeeForm from "@/components/CreateEmployeeForm";
 import EditEmployeeForm from "@/components/EditEmployeeForm";
@@ -11,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Employee, Department, Task } from "@shared/schema";
 
 export default function Employees() {
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [isCreateEmployeeModalOpen, setIsCreateEmployeeModalOpen] = useState(false);
@@ -51,7 +53,7 @@ export default function Employees() {
   };
 
   const handleViewEmployee = (id: string) => {
-    console.log('Viewing employee:', id);
+    setLocation(`/employees/${id}`);
   };
 
   const handleEditEmployee = (id: string) => {

@@ -14,6 +14,7 @@ import Tasks from "@/pages/Tasks";
 import Clients from "@/pages/Clients";
 import Departments from "@/pages/Departments";
 import Employees from "@/pages/Employees";
+import EmployeeDetail from "@/pages/EmployeeDetail";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/clients" component={Clients} />
       <Route path="/departments" component={Departments} />
       <Route path="/employees" component={Employees} />
+      <Route path="/employees/:id" component={EmployeeDetail} />
       <Route path="/reports" component={Reports} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
