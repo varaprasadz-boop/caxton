@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAllWorkflowStages, getDefaultStageDeadlines, type StageDeadlines } from "@shared/schema";
+import { format } from "date-fns";
 
 interface StageDeadlineAllocationProps {
   jobType: string;
@@ -41,7 +42,23 @@ export default function StageDeadlineAllocation({
 
   const handleDeadlineChange = (stage: string, dateValue: string) => {
     if (dateValue) {
-      const selectedDate = new Date(dateValue);
+      // Parse both dates as UTC midnight to avoid timezone issues
+      const [year, month, day] = dateValue.split('-').map(Number);
+      const selectedDate = new Date(Date.UTC(year, month - 1, day));
+      
+      const deliveryDate = new Date(deliveryDeadline);
+      const deliveryUTC = new Date(Date.UTC(
+        deliveryDate.getFullYear(),
+        deliveryDate.getMonth(),
+        deliveryDate.getDate()
+      ));
+      
+      // Validate that selected date is not after delivery deadline
+      if (selectedDate > deliveryUTC) {
+        alert(`Stage deadline cannot exceed job delivery date (${format(deliveryDate, "MMM dd, yyyy")})`);
+        return;
+      }
+      
       onDeadlinesChange({
         ...stageDeadlines,
         [stage]: selectedDate.toISOString()
@@ -117,6 +134,7 @@ export default function StageDeadlineAllocation({
                 type="date"
                 value={formatDateForInput(stageDeadlines[stage])}
                 onChange={(e) => handleDeadlineChange(stage, e.target.value)}
+                max={new Date(deliveryDeadline).toISOString().split('T')[0]}
                 className="w-40"
                 data-testid={`input-stage-deadline-${stage.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
               />

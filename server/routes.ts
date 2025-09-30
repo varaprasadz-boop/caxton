@@ -367,6 +367,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const validatedData = insertJobSchema.parse(requestData);
+      
+      // Validate that all stage deadlines are within the job delivery date
+      if (validatedData.stageDeadlines) {
+        const deliveryDate = new Date(validatedData.deadline);
+        const stageDeadlines = validatedData.stageDeadlines as Record<string, string>;
+        
+        for (const [stage, deadlineStr] of Object.entries(stageDeadlines)) {
+          const stageDeadline = new Date(deadlineStr);
+          if (stageDeadline > deliveryDate) {
+            return res.status(400).json({ 
+              error: "Invalid stage deadlines", 
+              details: `Stage "${stage}" deadline (${stageDeadline.toISOString()}) exceeds job delivery date (${deliveryDate.toISOString()})`
+            });
+          }
+        }
+      }
+      
       const job = await storage.createJob(validatedData);
       
       // Auto-generate workflow tasks based on job type and stage time allocations
@@ -439,6 +456,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tasks", async (req, res) => {
     try {
       const validatedData = insertTaskSchema.parse(req.body);
+      
+      // Validate that task deadline is within job delivery date
+      const job = await storage.getJob(validatedData.jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      const taskDeadline = new Date(validatedData.deadline);
+      const jobDeadline = new Date(job.deadline);
+      
+      if (taskDeadline > jobDeadline) {
+        return res.status(400).json({ 
+          error: "Invalid task deadline", 
+          details: `Task deadline (${taskDeadline.toISOString()}) exceeds job delivery date (${jobDeadline.toISOString()})`
+        });
+      }
+      
       const task = await storage.createTask(validatedData);
       res.status(201).json(task);
     } catch (error) {

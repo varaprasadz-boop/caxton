@@ -10,6 +10,7 @@ import type { Task, Employee } from "@shared/schema";
 
 interface TaskCardProps extends Task {
   employees: Employee[];
+  stage?: string;  // Department name passed from enhanced tasks
   jobTitle?: string;
   assignedEmployeeName?: string;
   onAssign?: (taskId: string, employeeId: string) => void;
@@ -105,7 +106,7 @@ export default function TaskCard({
   const isOverdue = new Date(deadline) < new Date() && status !== "completed";
 
   return (
-    <Card className="transition-colors hover-elevate" data-testid={`card-task-${id}`}>
+    <Card className={`transition-colors hover-elevate ${isOverdue ? "border-destructive border-2 bg-destructive/10" : ""}`} data-testid={`card-task-${id}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -145,7 +146,7 @@ export default function TaskCard({
               <SelectItem value="unassigned">Unassigned</SelectItem>
               {employees.map((employee) => (
                 <SelectItem key={employee.id} value={employee.id}>
-                  {employee.name} - {employee.role}
+                  {employee.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -175,12 +176,12 @@ export default function TaskCard({
         </div>
 
         {/* Deadline */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${isOverdue ? "text-destructive font-semibold" : ""}`}>
           <Calendar className="h-3 w-3" />
           <span className="text-sm">
             Due: {new Date(deadline).toLocaleDateString()}
             {isOverdue && status !== "completed" && (
-              <span className="text-destructive text-xs ml-2">(Overdue)</span>
+              <span className="text-xs ml-2">(Overdue)</span>
             )}
           </span>
         </div>

@@ -36,7 +36,7 @@ export default function JobCard({
   const isOverdue = new Date() > deadline && !["completed", "delivered"].includes(status.toLowerCase());
 
   return (
-    <Card className="hover-elevate" data-testid={`card-job-${id}`}>
+    <Card className={`hover-elevate ${isOverdue ? "border-destructive border-2 bg-destructive/10" : ""}`} data-testid={`card-job-${id}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -68,9 +68,9 @@ export default function JobCard({
         </div>
 
         <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <div className={`flex items-center gap-1 text-sm ${isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
             <Calendar className="h-3 w-3" />
-            <span className={isOverdue ? "text-overdue font-medium" : ""}>
+            <span>
               {format(deadline, "MMM dd, yyyy")}
             </span>
           </div>
