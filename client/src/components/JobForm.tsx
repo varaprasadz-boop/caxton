@@ -5,10 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertJobSchema, type InsertJob, type Job, type Client, JOB_TYPES, type StageDeadlines, getDefaultStageDeadlines } from "@shared/schema";
+import { insertJobSchema, type InsertJob, type Job, type Client, type Machine, JOB_TYPES, type StageDeadlines, getDefaultStageDeadlines } from "@shared/schema";
 import { z } from "zod";
 import { Calendar, User } from "lucide-react";
 import StageDeadlineAllocation from "./StageTimeAllocation";
@@ -31,16 +32,21 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
     finishingOptions: job?.finishingOptions || "",
     deadline: job?.deadline ? new Date(job.deadline) : new Date(),
     stageDeadlines: (job?.stageDeadlines as StageDeadlines) || {},
-    status: (job?.status as any) || "pending"
+    status: (job?.status as any) || "pending",
+    machineIds: job?.machineIds || []
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch clients for the dropdown
+  // Fetch clients and machines for the dropdowns
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"]
+  });
+
+  const { data: machines = [] } = useQuery<Machine[]>({
+    queryKey: ["/api/machines"]
   });
 
   const mutation = useMutation({
@@ -85,19 +91,8 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
     try {
       let validatedData;
       if (isEditing) {
-        // For editing, only validate provided fields (partial schema)
-        const partialJobSchema = insertJobSchema.partial();
-        const updateData = Object.fromEntries(
-          Object.entries(formData).filter(([key, value]) => {
-            // Only include fields that have been changed or are required
-            if (key === 'deadline') return true; // Always include deadline
-            return value !== '' && value !== null && value !== undefined;
-          })
-        );
-        validatedData = partialJobSchema.parse({
-          ...updateData,
-          deadline: formData.deadline
-        });
+        // For editing, send all current form data
+        validatedData = insertJobSchema.parse(formData);
       } else {
         // For creating, validate all required fields
         validatedData = insertJobSchema.parse(formData);
@@ -140,6 +135,20 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
 
   const handleStageDeadlinesChange = (deadlines: StageDeadlines) => {
     setFormData(prev => ({ ...prev, stageDeadlines: deadlines }));
+  };
+
+  const toggleMachine = (machineId: string) => {
+    setFormData(prev => {
+      const currentMachineIds = prev.machineIds || [];
+      const isSelected = currentMachineIds.includes(machineId);
+      
+      return {
+        ...prev,
+        machineIds: isSelected
+          ? currentMachineIds.filter(id => id !== machineId)
+          : [...currentMachineIds, machineId]
+      };
+    });
   };
 
   // Auto-populate default stage deadlines when job type changes (for new jobs only)
@@ -315,6 +324,36 @@ export default function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
               )}
             </div>
           </div>
+
+          {/* Machine Selection */}
+          {machines.length > 0 && (
+            <div className="space-y-3">
+              <Label>Select Machines (Optional)</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {machines.map((machine) => (
+                  <div key={machine.id} className="flex items-center space-x-2" data-testid={`checkbox-container-machine-${machine.id}`}>
+                    <Checkbox
+                      id={`machine-${machine.id}`}
+                      checked={(formData.machineIds || []).includes(machine.id)}
+                      onCheckedChange={() => toggleMachine(machine.id)}
+                      data-testid={`checkbox-machine-${machine.id}`}
+                    />
+                    <Label
+                      htmlFor={`machine-${machine.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {machine.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {(formData.machineIds || []).length > 0 && (
+                <p className="text-xs text-muted-foreground" data-testid="text-selected-machines-count">
+                  {(formData.machineIds || []).length} machine(s) selected
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Stage Time Allocation */}
           {!isEditing && (

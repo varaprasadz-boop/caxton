@@ -391,10 +391,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/machines/:id", async (req, res) => {
     try {
-      const deleted = await storage.deleteMachine(req.params.id);
-      if (!deleted) {
+      const machineId = req.params.id;
+      
+      // Check if machine exists
+      const machine = await storage.getMachine(machineId);
+      if (!machine) {
         return res.status(404).json({ error: "Machine not found" });
       }
+      
+      // Check if machine is referenced by any jobs
+      const jobs = await storage.getJobs();
+      const jobsUsingMachine = jobs.filter(job => 
+        job.machineIds && job.machineIds.includes(machineId)
+      );
+      
+      if (jobsUsingMachine.length > 0) {
+        return res.status(400).json({ 
+          error: "Cannot delete machine",
+          message: `This machine is being used by ${jobsUsingMachine.length} job(s). Please remove it from those jobs first.`
+        });
+      }
+      
+      await storage.deleteMachine(machineId);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete machine" });
