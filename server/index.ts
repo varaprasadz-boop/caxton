@@ -4,6 +4,13 @@ import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite"; // removed serveStatic import
 import cors from "cors";
 import path from "path";
+import { fileURLToPath } from "url";
+import pgSession from "connect-pg-simple";
+const PgSession = pgSession(session);
+
+// Polyfill for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
@@ -16,15 +23,19 @@ app.use(cors({
 const PORT = process.env.PORT || 3000;
 
 // Session configuration
+
+
 app.use(session({
+  store: new PgSession({
+    conString: process.env.DATABASE_URL,
+  }),
   secret: process.env.SESSION_SECRET || "caxton-php-secret-key-change-in-production",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === "production", // required for HTTPS
+    secure: process.env.NODE_ENV === "production",
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // 👈 allow cross-site cookies
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
 
