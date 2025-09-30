@@ -712,6 +712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Utility function to generate workflow tasks
   async function generateJobTasks(jobId: string, jobType: string, deadline: Date, stageDeadlines?: any) {
     const departments = await storage.getDepartments();
+    const employees = await storage.getEmployees();
     const deliveryDate = new Date(deadline);
     
     for (let i = 0; i < departments.length; i++) {
@@ -729,13 +730,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         taskDeadline = new Date(now.getTime() + (i + 1) * daysBetweenStages * 24 * 60 * 60 * 1000);
       }
       
+      // Auto-assign to an employee in this department
+      const departmentEmployees = employees.filter(emp => emp.departmentId === department.id);
+      const assignedEmployee = departmentEmployees.length > 0 ? departmentEmployees[0] : null;
+      
       await storage.createTask({
         jobId,
         departmentId: department.id,
         deadline: taskDeadline,
         status: "pending",
         order: i + 1,
-        employeeId: null,
+        employeeId: assignedEmployee?.id || null,
         remarks: null
       });
     }

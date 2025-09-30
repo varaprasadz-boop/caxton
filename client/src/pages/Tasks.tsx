@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Filter, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { Task, Employee, Job, Client } from "@shared/schema";
+import type { Task, Employee, Job, Client, Department } from "@shared/schema";
 
 // Helper functions for date filtering
 const getDateRanges = () => {
@@ -72,19 +72,26 @@ export default function Tasks() {
     queryKey: ["/api/clients"]
   });
 
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"]
+  });
+
   // Create lookup maps
   const employeeMap = new Map(employees.map(e => [e.id, e]));
   const jobMap = new Map(jobs.map(j => [j.id, j]));
   const clientMap = new Map(clients.map(c => [c.id, c]));
+  const departmentMap = new Map(departments.map(d => [d.id, d]));
 
   // Enhance tasks with additional info
   const enhancedTasks = tasks.map(task => {
     const job = jobMap.get(task.jobId);
     const client = job ? clientMap.get(job.clientId) : null;
     const assignedEmployee = task.employeeId ? employeeMap.get(task.employeeId) : null;
+    const department = departmentMap.get(task.departmentId);
 
     return {
       ...task,
+      stage: department?.name || 'Unknown',
       jobTitle: job ? `${job.jobType} - ${client?.name || 'Unknown Client'}` : 'Unknown Job',
       assignedEmployeeName: assignedEmployee?.name
     };
@@ -134,8 +141,8 @@ export default function Tasks() {
     new Date(task.deadline) < new Date() && task.status !== "completed"
   );
 
-  // Get unique stages for filter
-  const uniqueStages = Array.from(new Set(tasks.map(task => task.stage)));
+  // Get unique stages for filter (using department names)
+  const uniqueStages = departments.map(dept => dept.name);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
