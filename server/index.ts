@@ -16,8 +16,12 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors({
-  origin: process.env.CLIENT_URL || "https://caxton-services.onrender.com", // 👈 your frontend Render URL
-  credentials: true, // 👈 allow sending cookies
+  origin: [
+    "http://localhost:3000",              // local dev
+    "http://localhost:5173",              // local dev
+    "https://caxton-services.onrender.com" // your deployed frontend URL
+  ],
+  credentials: true   // 👈 allow cookies
 }));
 
 const PORT = process.env.PORT || 3000;
@@ -26,16 +30,14 @@ const PORT = process.env.PORT || 3000;
 
 
 app.use(session({
-  store: new PgSession({
-    conString: process.env.DATABASE_URL,
-  }),
-  secret: process.env.SESSION_SECRET || "caxton-php-secret-key-change-in-production",
+  secret: process.env.SESSION_SECRET || 'caxton-php-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === 'production', // only over HTTPS
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 👈 important
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
