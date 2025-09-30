@@ -1,6 +1,8 @@
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Download, Share } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Edit, Download, Share, FileText, Calendar, Package, User, Palette, Scissors } from "lucide-react";
 import JobTimelineVisualization from "@/components/JobTimelineVisualization";
 import JobForm from "@/components/JobForm";
 // import TaskAssignmentModal from "@/components/TaskAssignmentModal"; // TODO: Implement this component
@@ -9,7 +11,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { type Job } from "@shared/schema";
+import { type Job, type Client } from "@shared/schema";
+import { format } from "date-fns";
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -30,6 +33,17 @@ export default function JobDetail() {
       return res.json();
     },
     enabled: !!id
+  });
+
+  // Fetch client information
+  const { data: client } = useQuery<Client>({
+    queryKey: ["/api/clients", job?.clientId],
+    queryFn: async () => {
+      const res = await fetch(`/api/clients/${job?.clientId}`);
+      if (!res.ok) throw new Error('Failed to fetch client');
+      return res.json();
+    },
+    enabled: !!job?.clientId
   });
 
   // Mutation for updating task status
@@ -131,6 +145,166 @@ export default function JobDetail() {
           </Button>
         </div>
       </div>
+
+      {/* Job Details */}
+      {job && (
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Job Information Card */}
+          <Card data-testid="card-job-info">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Job Information</CardTitle>
+                <Badge variant={job.status === "completed" ? "default" : "secondary"}>
+                  {job.status.replace("-", " ")}
+                </Badge>
+              </div>
+              <CardDescription>Details about this printing job</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Package className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Job Type</p>
+                  <p className="text-sm text-muted-foreground">{job.jobType}</p>
+                </div>
+              </div>
+
+              {job.description && (
+                <div className="flex items-start gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Description</p>
+                    <p className="text-sm text-muted-foreground">{job.description}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-start gap-3">
+                <Package className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Quantity</p>
+                  <p className="text-sm text-muted-foreground">{job.quantity} units</p>
+                </div>
+              </div>
+
+              {job.size && (
+                <div className="flex items-start gap-3">
+                  <Scissors className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Size</p>
+                    <p className="text-sm text-muted-foreground">{job.size}</p>
+                  </div>
+                </div>
+              )}
+
+              {job.colors && (
+                <div className="flex items-start gap-3">
+                  <Palette className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Colors</p>
+                    <p className="text-sm text-muted-foreground">{job.colors}</p>
+                  </div>
+                </div>
+              )}
+
+              {job.finishingOptions && (
+                <div className="flex items-start gap-3">
+                  <Scissors className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Finishing Options</p>
+                    <p className="text-sm text-muted-foreground">{job.finishingOptions}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-start gap-3">
+                <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Delivery Deadline</p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(job.deadline), "PPP")}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Client & PO Information Card */}
+          <Card data-testid="card-client-po-info">
+            <CardHeader>
+              <CardTitle>Client & Documents</CardTitle>
+              <CardDescription>Client information and uploaded files</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {client && (
+                <>
+                  <div className="flex items-start gap-3">
+                    <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Client Name</p>
+                      <p className="text-sm text-muted-foreground">{client.name}</p>
+                    </div>
+                  </div>
+
+                  {client.company && (
+                    <div className="flex items-start gap-3">
+                      <Package className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Company</p>
+                        <p className="text-sm text-muted-foreground">{client.company}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-3">
+                    <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Email</p>
+                      <p className="text-sm text-muted-foreground">{client.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Phone</p>
+                      <p className="text-sm text-muted-foreground">{client.phone}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {job.poFileUrl && (
+                <div className="flex items-start gap-3 pt-4 border-t">
+                  <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium mb-2">Purchase Order (PO)</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(job.poFileUrl!, '_blank')}
+                      data-testid="button-view-po"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      View/Download PO
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {!job.poFileUrl && (
+                <div className="flex items-start gap-3 pt-4 border-t">
+                  <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Purchase Order (PO)</p>
+                    <p className="text-sm text-muted-foreground">No PO file uploaded</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Job Timeline Visualization */}
       <JobTimelineVisualization
