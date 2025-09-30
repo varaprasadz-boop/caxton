@@ -8,7 +8,11 @@ import path from "path";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cors()); // allow cross-origin requests
+app.use(cors({
+  origin: process.env.CLIENT_URL || "https://caxton-frontend.onrender.com", // 👈 your frontend Render URL
+  credentials: true, // 👈 allow sending cookies
+}));
+
 const PORT = process.env.PORT || 3000;
 
 // Session configuration
