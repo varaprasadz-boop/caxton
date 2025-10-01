@@ -1,11 +1,12 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
-import { setupVite, log } from "./vite"; // removed serveStatic import
+import { setupVite, log } from "./vite";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import pgSession from "connect-pg-simple";
+
 const PgSession = pgSession(session);
 
 // Polyfill for __dirname in ES modules
@@ -15,34 +16,46 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cors({
-  origin: [
-    "http://localhost:3000",              // local dev
-    "http://localhost:5173",              // local dev
-    "https://caxton-services.onrender.com" // your deployed frontend URL
-  ],
-  credentials: true   // 👈 allow cookies
-}));
+
+// ✅ CORS (only needed for local dev, safe in prod since same origin)
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://caxton-services.onrender.com", // same origin in prod
+    ],
+    credentials: true,
+  })
+);
 
 const PORT = process.env.PORT || 3000;
 
-// Session configuration
+// ✅ Session configuration (with Postgres store)
+app.set("trust proxy", 1); // 👈 required for secure cookies behind Render proxy
 
+app.use(
+  session({
+    store: new PgSession({
+      conString: process.env.DATABASE_URL, // Neon Postgres
+      createTableIfMissing: true,
+    }),
+    secret:
+      process.env.SESSION_SECRET ||
+      "caxton-php-secret-key-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    proxy: true,
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // cookies only over https in prod
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // same origin → strict/lax is fine
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    },
+  })
+);
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'caxton-php-secret-key-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production', // only over HTTPS
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 👈 important
-    maxAge: 24 * 60 * 60 * 1000
-  }
-}));
-
-
-// API request logger
+// ✅ API request logger
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
