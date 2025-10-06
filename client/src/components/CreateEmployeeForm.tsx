@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertEmployeeSchema, type InsertEmployee, type Department } from "@shared/schema";
+import { insertEmployeeSchema, type InsertEmployee, type Department, type Role } from "@shared/schema";
 import { z } from "zod";
 
 interface CreateEmployeeFormProps {
@@ -21,6 +21,7 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
     departmentId: "",
     email: "",
     phone: "",
+    roleId: "",
     password: ""
   });
 
@@ -31,6 +32,12 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
   // Fetch departments for dropdown
   const { data: departments = [] } = useQuery<Department[]>({
     queryKey: ["/api/departments"]
+  });
+
+  // Fetch roles for dropdown (admin only)
+  const { data: roles = [] } = useQuery<Role[]>({
+    queryKey: ["/api/roles"],
+    retry: false
   });
 
   const createEmployeeMutation = useMutation({
@@ -91,6 +98,13 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
     }
   };
 
+  const handleRoleChange = (value: string) => {
+    setFormData(prev => ({ ...prev, roleId: value }));
+    if (errors.roleId) {
+      setErrors(prev => ({ ...prev, roleId: "" }));
+    }
+  };
+
   return (
     <Card className="w-full max-w-2xl" data-testid="card-create-employee">
       <CardHeader>
@@ -133,6 +147,26 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
               </Select>
               {errors.departmentId && (
                 <p className="text-sm text-destructive">{errors.departmentId}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select value={formData.roleId || ""} onValueChange={handleRoleChange}>
+                <SelectTrigger data-testid="select-employee-role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">No role assigned</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.roleId && (
+                <p className="text-sm text-destructive">{errors.roleId}</p>
               )}
             </div>
           </div>

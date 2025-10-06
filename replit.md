@@ -34,7 +34,12 @@ Preferred communication style: Simple, everyday language.
 ### Authentication and Authorization
 - **Session Management**: Express sessions with PostgreSQL storage for persistence
 - **Security**: CORS configuration and credential-based authentication
-- **Access Control**: Route-level protection with middleware-based authentication checks
+- **Access Control**: Role-based permission system with granular module-level permissions
+- **Role System**: Database-driven roles with custom permissions for create/edit/view/delete actions
+- **Admin Credentials**: michael.torres@caxton.com / admin123 (bcrypt hashed)
+- **Permission Modules**: Jobs, Clients, Employees, Departments, Machines, Tasks, Roles
+- **Permission Actions**: Create, Edit, View, Delete per module (stored as JSON in database)
+- **Employee Roles**: Each employee can be assigned a role with specific permission set
 
 ### Design System and UI Architecture
 - **Design Approach**: Material Design principles for utility-focused business applications
