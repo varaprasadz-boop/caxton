@@ -9,7 +9,8 @@ import {
   FileText,
   Building2,
   FileBarChart,
-  Cog
+  Cog,
+  Shield
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -59,6 +60,11 @@ const menuItems = [
     title: "Machines",
     url: "/machines",
     icon: Cog,
+  },
+  {
+    title: "Roles",
+    url: "/roles",
+    icon: Shield,
   },
   {
     title: "Reports",

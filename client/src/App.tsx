@@ -17,6 +17,7 @@ import Departments from "@/pages/Departments";
 import Employees from "@/pages/Employees";
 import EmployeeDetail from "@/pages/EmployeeDetail";
 import Machines from "@/pages/Machines";
+import Roles from "@/pages/Roles";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/employees" component={Employees} />
       <Route path="/employees/:id" component={EmployeeDetail} />
       <Route path="/machines" component={Machines} />
+      <Route path="/roles" component={Roles} />
       <Route path="/reports" component={Reports} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
