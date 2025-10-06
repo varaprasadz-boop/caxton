@@ -10,6 +10,7 @@ import bcrypt from 'bcrypt';
 import { 
   insertClientSchema, 
   insertDepartmentSchema,
+  insertRoleSchema,
   insertEmployeeSchema,
   insertMachineSchema,
   insertJobSchema, 
@@ -319,6 +320,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete department" });
+    }
+  });
+
+  // Roles routes (Admin only for all operations)
+  app.get("/api/roles", requireAdmin, async (req, res) => {
+    try {
+      const roles = await storage.getRoles();
+      res.json(roles);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch roles" });
+    }
+  });
+
+  app.get("/api/roles/:id", requireAdmin, async (req, res) => {
+    try {
+      const role = await storage.getRole(req.params.id);
+      if (!role) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      res.json(role);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch role" });
+    }
+  });
+
+  app.post("/api/roles", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertRoleSchema.parse(req.body);
+      const role = await storage.createRole(validatedData);
+      res.status(201).json(role);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid role data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create role" });
+    }
+  });
+
+  app.patch("/api/roles/:id", requireAdmin, async (req, res) => {
+    try {
+      const updates = insertRoleSchema.partial().parse(req.body);
+      const role = await storage.updateRole(req.params.id, updates);
+      if (!role) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      res.json(role);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid role data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update role" });
+    }
+  });
+
+  app.delete("/api/roles/:id", requireAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteRole(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete role" });
     }
   });
 
