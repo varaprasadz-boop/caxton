@@ -193,7 +193,15 @@ interface RoleFormDialogProps {
 }
 
 function RoleFormDialog({ open, onOpenChange, role, onSubmit, isPending }: RoleFormDialogProps) {
-  const defaultPermissions = role?.permissions || {};
+  const defaultPermissions = role?.permissions || {
+    jobs: { create: false, edit: false, view: false, delete: false },
+    clients: { create: false, edit: false, view: false, delete: false },
+    employees: { create: false, edit: false, view: false, delete: false },
+    departments: { create: false, edit: false, view: false, delete: false },
+    machines: { create: false, edit: false, view: false, delete: false },
+    tasks: { create: false, edit: false, view: false, delete: false },
+    roles: { create: false, edit: false, view: false, delete: false }
+  };
   
   const form = useForm<InsertRole>({
     resolver: zodResolver(insertRoleSchema),
