@@ -24,6 +24,15 @@ export const departments = pgTable("departments", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Roles table for granular permission management
+export const roles = pgTable("roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  permissions: json("permissions").notNull(), // JSON object with module permissions
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Employees table
 export const employees = pgTable("employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -32,7 +41,8 @@ export const employees = pgTable("employees", {
   email: text("email").notNull().unique(), // Email is username, must be unique
   phone: text("phone"),
   passwordHash: text("password_hash"), // Hashed password for login
-  role: text("role").notNull().default("employee"), // 'admin' or 'employee'
+  role: text("role").notNull().default("employee"), // 'admin' or 'employee' - system role
+  roleId: varchar("role_id"), // Reference to custom roles table for granular permissions
 });
 
 // Machines table
@@ -80,9 +90,37 @@ export const tasks = pgTable("tasks", {
 // Stage deadline allocation schema
 export const stageDeadlinesSchema = z.record(z.string(), z.string().datetime()); // stage name -> ISO date string
 
+// Permission structure schema
+export const modulePermissionSchema = z.object({
+  create: z.boolean().default(false),
+  edit: z.boolean().default(false),
+  view: z.boolean().default(false),
+  delete: z.boolean().default(false),
+});
+
+export const permissionsSchema = z.object({
+  jobs: modulePermissionSchema,
+  clients: modulePermissionSchema,
+  employees: modulePermissionSchema,
+  departments: modulePermissionSchema,
+  machines: modulePermissionSchema,
+  tasks: modulePermissionSchema,
+  roles: modulePermissionSchema.optional(), // Only admins can manage roles
+});
+
+// Available modules for permission management
+export const PERMISSION_MODULES = ["jobs", "clients", "employees", "departments", "machines", "tasks", "roles"] as const;
+export type PermissionModule = typeof PERMISSION_MODULES[number];
+
+export type ModulePermissions = z.infer<typeof modulePermissionSchema>;
+export type Permissions = z.infer<typeof permissionsSchema>;
+
 // Insert schemas
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true });
+export const insertRoleSchema = createInsertSchema(roles).omit({ id: true, createdAt: true }).extend({
+  permissions: permissionsSchema,
+});
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
 export const insertMachineSchema = createInsertSchema(machines).omit({ id: true, createdAt: true });
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true }).extend({
@@ -101,6 +139,8 @@ export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Department = typeof departments.$inferSelect;
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type Role = typeof roles.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
 export type InsertMachine = z.infer<typeof insertMachineSchema>;

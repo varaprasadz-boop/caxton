@@ -3,6 +3,8 @@ import {
   type InsertClient,
   type Department,
   type InsertDepartment,
+  type Role,
+  type InsertRole,
   type Employee, 
   type InsertEmployee,
   type Machine,
@@ -13,6 +15,7 @@ import {
   type InsertTask,
   clients,
   departments,
+  roles,
   employees,
   machines,
   jobs,
@@ -39,6 +42,13 @@ export interface IStorage {
   createDepartment(department: InsertDepartment): Promise<Department>;
   updateDepartment(id: string, updates: Partial<InsertDepartment>): Promise<Department | undefined>;
   deleteDepartment(id: string): Promise<boolean>;
+  
+  // Roles
+  getRole(id: string): Promise<Role | undefined>;
+  getRoles(): Promise<Role[]>;
+  createRole(role: InsertRole): Promise<Role>;
+  updateRole(id: string, updates: Partial<InsertRole>): Promise<Role | undefined>;
+  deleteRole(id: string): Promise<boolean>;
   
   // Employees
   getEmployee(id: string): Promise<Employee | undefined>;
@@ -377,6 +387,31 @@ export class PostgreSQLStorage implements IStorage {
 
   async deleteDepartment(id: string): Promise<boolean> {
     const result = await db.delete(departments).where(eq(departments.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Roles
+  async getRole(id: string): Promise<Role | undefined> {
+    const result = await db.select().from(roles).where(eq(roles.id, id));
+    return result[0] || undefined;
+  }
+
+  async getRoles(): Promise<Role[]> {
+    return await db.select().from(roles);
+  }
+
+  async createRole(insertRole: InsertRole): Promise<Role> {
+    const result = await db.insert(roles).values(insertRole).returning();
+    return result[0];
+  }
+
+  async updateRole(id: string, updates: Partial<InsertRole>): Promise<Role | undefined> {
+    const result = await db.update(roles).set(updates).where(eq(roles.id, id)).returning();
+    return result[0] || undefined;
+  }
+
+  async deleteRole(id: string): Promise<boolean> {
+    const result = await db.delete(roles).where(eq(roles.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 
