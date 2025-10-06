@@ -13,6 +13,7 @@ import {
   Shield
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +25,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
+import type { Employee } from "@/../../shared/schema";
 
 const menuItems = [
   {
@@ -80,6 +82,19 @@ const menuItems = [
 
 export default function AppSidebar() {
   const [location] = useLocation();
+  
+  const { data: currentUser } = useQuery<Employee>({
+    queryKey: ["/api/me"],
+  });
+
+  // Filter menu items based on user permissions
+  const visibleMenuItems = menuItems.filter(item => {
+    // Only show Roles menu item to admins
+    if (item.url === "/roles") {
+      return currentUser?.role === 'admin';
+    }
+    return true;
+  });
 
   return (
     <Sidebar data-testid="sidebar-main">
@@ -99,7 +114,7 @@ export default function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {visibleMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 
