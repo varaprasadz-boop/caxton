@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { uploadMiddleware, handleFileUpload } from "./upload";
-import { requireAuth, requireAdmin, getUserRole } from "./auth";
+import { requireAuth, requireAdmin, requirePermission, getUserRole } from "./auth";
 import fs from 'fs';
 import path from 'path';
 import { Client } from '@replit/object-storage';
@@ -21,6 +21,12 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Attach storage to all requests for permission checks
+  app.use((req, res, next) => {
+    req.storage = storage as any; // Storage is PostgreSQL in production
+    next();
+  });
+
   // Authentication routes
   app.post("/api/login", async (req, res) => {
     try {
@@ -198,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Clients routes (Admin only for modifications, all authenticated users can view)
-  app.get("/api/clients", requireAuth, async (req, res) => {
+  app.get("/api/clients", requirePermission('clients', 'view'), async (req, res) => {
     try {
       const clients = await storage.getClients();
       res.json(clients);
@@ -219,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients", requireAdmin, async (req, res) => {
+  app.post("/api/clients", requirePermission('clients', 'create'), async (req, res) => {
     try {
       const validatedData = insertClientSchema.parse(req.body);
       const client = await storage.createClient(validatedData);
@@ -232,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/clients/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/clients/:id", requirePermission('clients', 'edit'), async (req, res) => {
     try {
       const updates = insertClientSchema.partial().parse(req.body);
       const client = await storage.updateClient(req.params.id, updates);
@@ -248,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/clients/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/clients/:id", requirePermission('clients', 'delete'), async (req, res) => {
     try {
       const deleted = await storage.deleteClient(req.params.id);
       if (!deleted) {
@@ -261,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Departments routes
-  app.get("/api/departments", requireAuth, async (req, res) => {
+  app.get("/api/departments", requirePermission('departments', 'view'), async (req, res) => {
     try {
       const departments = await storage.getDepartments();
       res.json(departments);
@@ -282,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/departments", requireAdmin, async (req, res) => {
+  app.post("/api/departments", requirePermission('departments', 'create'), async (req, res) => {
     try {
       const validatedData = insertDepartmentSchema.parse(req.body);
       const department = await storage.createDepartment(validatedData);
@@ -295,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/departments/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/departments/:id", requirePermission('departments', 'edit'), async (req, res) => {
     try {
       const updates = insertDepartmentSchema.partial().parse(req.body);
       const department = await storage.updateDepartment(req.params.id, updates);
@@ -311,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/departments/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/departments/:id", requirePermission('departments', 'delete'), async (req, res) => {
     try {
       const success = await storage.deleteDepartment(req.params.id);
       if (!success) {
@@ -387,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Employees routes
-  app.get("/api/employees", requireAuth, async (req, res) => {
+  app.get("/api/employees", requirePermission('employees', 'view'), async (req, res) => {
     try {
       const employees = await storage.getEmployees();
       res.json(employees);
@@ -408,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/employees", requireAdmin, async (req, res) => {
+  app.post("/api/employees", requirePermission('employees', 'create'), async (req, res) => {
     try {
       const { password, ...employeeData } = req.body;
       const validatedData = insertEmployeeSchema.parse(employeeData);
@@ -435,7 +441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/employees/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/employees/:id", requirePermission('employees', 'edit'), async (req, res) => {
     try {
       const { password, ...employeeData } = req.body;
       const updates = insertEmployeeSchema.partial().parse(employeeData);
@@ -466,7 +472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/employees/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/employees/:id", requirePermission('employees', 'delete'), async (req, res) => {
     try {
       const deleted = await storage.deleteEmployee(req.params.id);
       if (!deleted) {
@@ -479,7 +485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Machines routes
-  app.get("/api/machines", requireAuth, async (req, res) => {
+  app.get("/api/machines", requirePermission('machines', 'view'), async (req, res) => {
     try {
       const machines = await storage.getMachines();
       res.json(machines);
@@ -500,7 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/machines", requireAdmin, async (req, res) => {
+  app.post("/api/machines", requirePermission('machines', 'create'), async (req, res) => {
     try {
       const validatedData = insertMachineSchema.parse(req.body);
       const machine = await storage.createMachine(validatedData);
@@ -513,7 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/machines/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/machines/:id", requirePermission('machines', 'edit'), async (req, res) => {
     try {
       const updates = insertMachineSchema.partial().parse(req.body);
       const machine = await storage.updateMachine(req.params.id, updates);
@@ -529,7 +535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/machines/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/machines/:id", requirePermission('machines', 'delete'), async (req, res) => {
     try {
       const machineId = req.params.id;
       
@@ -644,7 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Jobs routes (All authenticated users can view jobs, only admin can modify)
-  app.get("/api/jobs", requireAuth, async (req, res) => {
+  app.get("/api/jobs", requirePermission('jobs', 'view'), async (req, res) => {
     try {
       const jobs = await storage.getJobs();
       res.json(jobs);
@@ -665,7 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/jobs", requireAdmin, async (req, res) => {
+  app.post("/api/jobs", requirePermission('jobs', 'create'), async (req, res) => {
     try {
       // Handle date string conversion for API compatibility
       const requestData = { ...req.body };
@@ -705,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/jobs/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/jobs/:id", requirePermission('jobs', 'edit'), async (req, res) => {
     try {
       // Handle date string conversion for API compatibility
       const requestData = { ...req.body };
@@ -731,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tasks routes
-  app.get("/api/tasks", requireAuth, async (req, res) => {
+  app.get("/api/tasks", requirePermission('tasks', 'view'), async (req, res) => {
     try {
       const { jobId } = req.query;
       let tasks;
@@ -778,7 +784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks", requireAdmin, async (req, res) => {
+  app.post("/api/tasks", requirePermission('tasks', 'create'), async (req, res) => {
     try {
       const validatedData = insertTaskSchema.parse(req.body);
       
@@ -808,7 +814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/tasks/:id", requireAuth, async (req, res) => {
+  app.patch("/api/tasks/:id", requirePermission('tasks', 'edit'), async (req, res) => {
     try {
       const { status, employeeId, remarks } = req.body;
       
