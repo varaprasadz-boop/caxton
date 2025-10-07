@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -206,11 +206,29 @@ function RoleFormDialog({ open, onOpenChange, role, onSubmit, isPending }: RoleF
   const form = useForm<InsertRole>({
     resolver: zodResolver(insertRoleSchema),
     defaultValues: {
-      name: role?.name || "",
-      description: role?.description || "",
-      permissions: defaultPermissions
+      name: "",
+      description: "",
+      permissions: {
+        jobs: { create: false, edit: false, view: false, delete: false },
+        clients: { create: false, edit: false, view: false, delete: false },
+        employees: { create: false, edit: false, view: false, delete: false },
+        departments: { create: false, edit: false, view: false, delete: false },
+        machines: { create: false, edit: false, view: false, delete: false },
+        tasks: { create: false, edit: false, view: false, delete: false },
+        roles: { create: false, edit: false, view: false, delete: false }
+      }
     }
   });
+
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: role?.name || "",
+        description: role?.description || "",
+        permissions: defaultPermissions
+      });
+    }
+  }, [open, role]);
 
   const handleSubmit = (data: InsertRole) => {
     onSubmit(data);
