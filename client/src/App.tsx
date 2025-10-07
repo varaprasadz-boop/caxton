@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import type { Permissions } from "@shared/schema";
 
 function Router() {
   return (
@@ -47,12 +48,14 @@ function Router() {
   );
 }
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
   departmentId: string | null;
   role: 'admin' | 'employee';
+  roleId: string | null;
+  permissions: Permissions | null;
 }
 
 function AuthenticatedApp() {
