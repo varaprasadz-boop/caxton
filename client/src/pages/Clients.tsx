@@ -8,11 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Client } from "@shared/schema";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function Clients() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
+  const { canCreate } = usePermissions();
 
   // Fetch real data
   const { data: clients = [] } = useQuery<Client[]>({
@@ -72,10 +74,12 @@ export default function Clients() {
             Manage your client relationships and contact information
           </p>
         </div>
-        <Button onClick={handleCreateClient} data-testid="button-create-client">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Client
-        </Button>
+        {canCreate('clients') && (
+          <Button onClick={handleCreateClient} data-testid="button-create-client">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Client
+          </Button>
+        )}
       </div>
 
       {/* Search */}
