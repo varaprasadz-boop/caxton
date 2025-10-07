@@ -100,7 +100,7 @@ export default function AppSidebar() {
   return (
     <Sidebar data-testid="sidebar-main">
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center bg-black rounded-md p-3">
           <img 
             src={tenJumpLogo} 
             alt="TenJump" 

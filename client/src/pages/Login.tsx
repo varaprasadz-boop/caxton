@@ -59,11 +59,13 @@ export default function Login() {
       <Card className="w-full max-w-md" data-testid="card-login">
         <CardHeader className="space-y-4">
           <div className="flex justify-center">
-            <img 
-              src={tenJumpLogo} 
-              alt="TenJump" 
-              className="h-16 w-auto"
-            />
+            <div className="bg-black rounded-md p-4">
+              <img 
+                src={tenJumpLogo} 
+                alt="TenJump" 
+                className="h-16 w-auto"
+              />
+            </div>
           </div>
           <CardDescription className="text-center">
             Sign in to your account to continue
