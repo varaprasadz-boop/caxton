@@ -26,6 +26,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import type { Employee } from "@/../../shared/schema";
+import tenJumpLogo from "@assets/image_1759820515160.png";
 
 const menuItems = [
   {
@@ -99,14 +100,12 @@ export default function AppSidebar() {
   return (
     <Sidebar data-testid="sidebar-main">
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
-            <FileText className="h-4 w-4" />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-sidebar-foreground">Caxton PHP</h2>
-            <p className="text-xs text-sidebar-foreground/70">Print Workflow</p>
-          </div>
+        <div className="flex items-center justify-center">
+          <img 
+            src={tenJumpLogo} 
+            alt="TenJump" 
+            className="h-12 w-auto"
+          />
         </div>
       </SidebarHeader>
       <SidebarContent>

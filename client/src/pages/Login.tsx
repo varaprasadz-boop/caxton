@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import tenJumpLogo from "@assets/image_1759820515160.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -56,8 +57,14 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md" data-testid="card-login">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Caxton PHP</CardTitle>
+        <CardHeader className="space-y-4">
+          <div className="flex justify-center">
+            <img 
+              src={tenJumpLogo} 
+              alt="TenJump" 
+              className="h-16 w-auto"
+            />
+          </div>
           <CardDescription className="text-center">
             Sign in to your account to continue
           </CardDescription>
