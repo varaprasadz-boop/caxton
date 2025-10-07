@@ -90,12 +90,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
       
+      // Fetch role permissions if user has a roleId
+      let permissions = null;
+      if (employee.roleId) {
+        const role = await storage.getRole(employee.roleId);
+        if (role) {
+          permissions = role.permissions;
+        }
+      }
+      
       res.json({
         id: employee.id,
         name: employee.name,
         email: employee.email,
         departmentId: employee.departmentId,
-        role: req.session.userRole
+        role: req.session.userRole,
+        roleId: employee.roleId,
+        permissions: permissions
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch user info" });
