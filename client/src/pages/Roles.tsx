@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertRoleSchema, type Role, type InsertRole } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const MODULES = [
   { key: "jobs", label: "Jobs" },
@@ -35,6 +36,7 @@ export default function Roles() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const { toast } = useToast();
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   const { data: roles = [] } = useQuery<Role[]>({
     queryKey: ["/api/roles"]
@@ -108,10 +110,12 @@ export default function Roles() {
             Define custom roles with granular permissions
           </p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} data-testid="button-create-role">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Role
-        </Button>
+        {canCreate('roles') && (
+          <Button onClick={() => setIsCreateModalOpen(true)} data-testid="button-create-role">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Role
+          </Button>
+        )}
       </div>
 
       <div className="relative flex-1 max-w-sm">
@@ -135,22 +139,26 @@ export default function Roles() {
                   <CardTitle>{role.name}</CardTitle>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setEditingRole(role)}
-                    data-testid={`button-edit-role-${role.id}`}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => deleteMutation.mutate(role.id)}
-                    data-testid={`button-delete-role-${role.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canEdit('roles') && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setEditingRole(role)}
+                      data-testid={`button-edit-role-${role.id}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canDelete('roles') && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => deleteMutation.mutate(role.id)}
+                      data-testid={`button-delete-role-${role.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
               {role.description && (

@@ -121,10 +121,12 @@ export default function Clients() {
       {clients.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">No clients yet</p>
-          <Button onClick={handleCreateClient} data-testid="button-create-first-client">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Your First Client
-          </Button>
+          {canCreate('clients') && (
+            <Button onClick={handleCreateClient} data-testid="button-create-first-client">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Your First Client
+            </Button>
+          )}
         </div>
       )}
 

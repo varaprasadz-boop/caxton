@@ -141,10 +141,12 @@ export default function Jobs() {
           <p className="text-sm text-muted-foreground mb-6">
             Create your first job to get started with the workflow management
           </p>
-          <Button onClick={handleCreateJob} data-testid="button-create-first-job">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Your First Job
-          </Button>
+          {canCreate('jobs') && (
+            <Button onClick={handleCreateJob} data-testid="button-create-first-job">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Your First Job
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

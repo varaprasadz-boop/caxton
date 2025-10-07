@@ -173,10 +173,12 @@ export default function Employees() {
       {employees.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">No employees yet</p>
-          <Button onClick={handleCreateEmployee} data-testid="button-create-first-employee">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Your First Employee
-          </Button>
+          {canCreate('employees') && (
+            <Button onClick={handleCreateEmployee} data-testid="button-create-first-employee">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Your First Employee
+            </Button>
+          )}
         </div>
       )}
 
