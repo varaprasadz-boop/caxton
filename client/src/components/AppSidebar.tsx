@@ -25,10 +25,17 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import type { Employee } from "@/../../shared/schema";
+import type { Employee, Permissions, PermissionModule } from "@/../../shared/schema";
 import tenJumpLogo from "@assets/image_1759820515160.png";
 
-const menuItems = [
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: any;
+  module?: PermissionModule;
+}
+
+const menuItems: MenuItem[] = [
   {
     title: "Dashboard",
     url: "/",
@@ -38,36 +45,43 @@ const menuItems = [
     title: "Jobs",
     url: "/jobs",
     icon: Briefcase,
+    module: "jobs",
   },
   {
     title: "Tasks",
     url: "/tasks",
     icon: CheckSquare,
+    module: "tasks",
   },
   {
     title: "Clients",
     url: "/clients",
     icon: Users,
+    module: "clients",
   },
   {
     title: "Departments",
     url: "/departments",
     icon: Building2,
+    module: "departments",
   },
   {
     title: "Employees",
     url: "/employees",
     icon: UserCheck,
+    module: "employees",
   },
   {
     title: "Machines",
     url: "/machines",
     icon: Cog,
+    module: "machines",
   },
   {
     title: "Roles",
     url: "/roles",
     icon: Shield,
+    module: "roles",
   },
   {
     title: "Reports",
@@ -81,20 +95,42 @@ const menuItems = [
   },
 ];
 
+interface CurrentUser extends Employee {
+  permissions?: Permissions;
+}
+
 export default function AppSidebar() {
   const [location] = useLocation();
   
-  const { data: currentUser } = useQuery<Employee>({
+  const { data: currentUser } = useQuery<CurrentUser>({
     queryKey: ["/api/me"],
   });
 
   // Filter menu items based on user permissions
   const visibleMenuItems = menuItems.filter(item => {
-    // Only show Roles menu item to admins
-    if (item.url === "/roles") {
-      return currentUser?.role === 'admin';
+    // Always show Dashboard
+    if (item.url === "/") {
+      return true;
     }
-    return true;
+
+    // Always show Reports and Settings to all authenticated users
+    if (item.url === "/reports" || item.url === "/settings") {
+      return true;
+    }
+
+    // Admins can see everything
+    if (currentUser?.role === 'admin') {
+      return true;
+    }
+
+    // For items with module permissions, check if user has view permission
+    if (item.module && currentUser?.permissions) {
+      const modulePermissions = currentUser.permissions[item.module];
+      return modulePermissions?.view === true;
+    }
+
+    // Hide items without module mapping for non-admins (safety default)
+    return false;
   });
 
   return (
