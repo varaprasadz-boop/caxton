@@ -660,6 +660,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee password change route
+  app.post("/api/employee/change-password", requireAuth, async (req, res) => {
+    try {
+      // Validate input
+      const passwordChangeSchema = z.object({
+        currentPassword: z.string().min(1, "Current password is required"),
+        newPassword: z.string().min(6, "New password must be at least 6 characters"),
+        confirmPassword: z.string().min(1, "Password confirmation is required")
+      }).refine((data) => data.newPassword === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"]
+      });
+
+      const validatedData = passwordChangeSchema.parse(req.body);
+      const { currentPassword, newPassword } = validatedData;
+
+      // Get current user
+      const employee = await storage.getEmployee(req.session.userId!);
+      
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      // Verify current password
+      if (!employee.passwordHash) {
+        return res.status(400).json({ error: "No password set for this account" });
+      }
+
+      const passwordMatch = await bcrypt.compare(currentPassword, employee.passwordHash);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // Hash and update new password
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      await storage.updateEmployee(employee.id, { passwordHash });
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      console.error("Employee password change error:", error);
+      res.status(500).json({ error: "Failed to update password" });
+    }
+  });
+
   // Jobs routes (All authenticated users can view jobs, only admin can modify)
   app.get("/api/jobs", requirePermission('jobs', 'view'), async (req, res) => {
     try {
