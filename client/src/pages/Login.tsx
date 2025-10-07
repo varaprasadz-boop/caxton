@@ -18,20 +18,9 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
- const API_URL = import.meta.env.VITE_API_URL;
 
     try {
-      // const res = await apiRequest("POST", "/api/login", { email, password });
-      const res = await fetch(`${API_URL}/api/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include", // 👈 send session cookies
-      body: JSON.stringify({ email, password }),
-    });
-
-      const user = await res.json();
+      const user = await apiRequest("POST", "/api/login", { email, password });
 
       toast({
         title: "Welcome back!",
