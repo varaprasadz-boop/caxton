@@ -13,12 +13,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertMachineSchema, type Machine, type InsertMachine, type Department } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function Machines() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const { toast } = useToast();
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   const { data: machines = [] } = useQuery<Machine[]>({
     queryKey: ["/api/machines"]
@@ -90,10 +92,12 @@ export default function Machines() {
             Manage printing equipment and machinery
           </p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} data-testid="button-create-machine">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Machine
-        </Button>
+        {canCreate('machines') && (
+          <Button onClick={() => setIsCreateModalOpen(true)} data-testid="button-create-machine">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Machine
+          </Button>
+        )}
       </div>
 
       <div className="relative flex-1 max-w-sm">
@@ -114,22 +118,26 @@ export default function Machines() {
               <div className="flex items-center justify-between">
                 <CardTitle>{machine.name}</CardTitle>
                 <div className="flex gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setEditingMachine(machine)}
-                    data-testid={`button-edit-machine-${machine.id}`}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => deleteMutation.mutate(machine.id)}
-                    data-testid={`button-delete-machine-${machine.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canEdit('machines') && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setEditingMachine(machine)}
+                      data-testid={`button-edit-machine-${machine.id}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canDelete('machines') && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => deleteMutation.mutate(machine.id)}
+                      data-testid={`button-delete-machine-${machine.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
               <div>

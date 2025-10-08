@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Employee, Department, Task } from "@shared/schema";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function Employees() {
   const [, setLocation] = useLocation();
@@ -17,6 +18,7 @@ export default function Employees() {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [isCreateEmployeeModalOpen, setIsCreateEmployeeModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const { canCreate } = usePermissions();
 
   // Fetch real data
   const { data: employees = [] } = useQuery<Employee[]>({
@@ -96,10 +98,12 @@ export default function Employees() {
             Manage your team members and their assignments
           </p>
         </div>
-        <Button onClick={handleCreateEmployee} data-testid="button-create-employee">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Employee
-        </Button>
+        {canCreate('employees') && (
+          <Button onClick={handleCreateEmployee} data-testid="button-create-employee">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Employee
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -169,10 +173,12 @@ export default function Employees() {
       {employees.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">No employees yet</p>
-          <Button onClick={handleCreateEmployee} data-testid="button-create-first-employee">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Your First Employee
-          </Button>
+          {canCreate('employees') && (
+            <Button onClick={handleCreateEmployee} data-testid="button-create-first-employee">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Your First Employee
+            </Button>
+          )}
         </div>
       )}
 

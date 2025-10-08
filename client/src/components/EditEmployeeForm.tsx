@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertEmployeeSchema, type InsertEmployee, type Department, type Employee } from "@shared/schema";
+import { insertEmployeeSchema, type InsertEmployee, type Department, type Employee, type Role } from "@shared/schema";
 import { z } from "zod";
 
 interface EditEmployeeFormProps {
@@ -22,6 +22,7 @@ export default function EditEmployeeForm({ employee, onSuccess, onCancel }: Edit
     departmentId: employee.departmentId || "",
     email: employee.email,
     phone: employee.phone || "",
+    roleId: employee.roleId || "",
     password: ""
   });
 
@@ -32,6 +33,12 @@ export default function EditEmployeeForm({ employee, onSuccess, onCancel }: Edit
   // Fetch departments for dropdown
   const { data: departments = [] } = useQuery<Department[]>({
     queryKey: ["/api/departments"]
+  });
+
+  // Fetch roles for dropdown (admin only)
+  const { data: roles = [] } = useQuery<Role[]>({
+    queryKey: ["/api/roles"],
+    retry: false
   });
 
   const updateEmployeeMutation = useMutation({
@@ -99,6 +106,13 @@ export default function EditEmployeeForm({ employee, onSuccess, onCancel }: Edit
     }
   };
 
+  const handleRoleChange = (value: string) => {
+    setFormData(prev => ({ ...prev, roleId: value }));
+    if (errors.roleId) {
+      setErrors(prev => ({ ...prev, roleId: "" }));
+    }
+  };
+
   return (
     <Card className="w-full max-w-2xl" data-testid="card-edit-employee">
       <CardHeader>
@@ -141,6 +155,26 @@ export default function EditEmployeeForm({ employee, onSuccess, onCancel }: Edit
               </Select>
               {errors.departmentId && (
                 <p className="text-sm text-destructive">{errors.departmentId}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select value={formData.roleId || ""} onValueChange={handleRoleChange}>
+                <SelectTrigger data-testid="select-employee-role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">No role assigned</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.roleId && (
+                <p className="text-sm text-destructive">{errors.roleId}</p>
               )}
             </div>
           </div>

@@ -11,12 +11,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertDepartmentSchema, type Department, type InsertDepartment } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function Departments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const { toast } = useToast();
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   const { data: departments = [] } = useQuery<Department[]>({
     queryKey: ["/api/departments"]
@@ -79,10 +81,12 @@ export default function Departments() {
             Manage workflow departments and stages
           </p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} data-testid="button-create-department">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Department
-        </Button>
+        {canCreate('departments') && (
+          <Button onClick={() => setIsCreateModalOpen(true)} data-testid="button-create-department">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Department
+          </Button>
+        )}
       </div>
 
       <div className="relative flex-1 max-w-sm">
@@ -103,22 +107,26 @@ export default function Departments() {
               <div className="flex items-center justify-between">
                 <CardTitle>{department.name}</CardTitle>
                 <div className="flex gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setEditingDepartment(department)}
-                    data-testid={`button-edit-department-${department.id}`}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => deleteMutation.mutate(department.id)}
-                    data-testid={`button-delete-department-${department.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canEdit('departments') && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setEditingDepartment(department)}
+                      data-testid={`button-edit-department-${department.id}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canDelete('departments') && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => deleteMutation.mutate(department.id)}
+                      data-testid={`button-delete-department-${department.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
               <CardDescription>Order: {department.order}</CardDescription>

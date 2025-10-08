@@ -11,10 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Activity, BarChart3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { usePermissions } from "@/hooks/use-permissions";
 import type { Job, Client } from "@shared/schema";
 
 export default function Dashboard() {
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
+  const { canCreate } = usePermissions();
 
   // Fetch real data
   const { data: jobs = [] } = useQuery<Job[]>({
@@ -79,10 +81,12 @@ export default function Dashboard() {
             Real-time overview of your printing workflow operations
           </p>
         </div>
-        <Button onClick={handleCreateJob} data-testid="button-create-job">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Job
-        </Button>
+        {canCreate('jobs') && (
+          <Button onClick={handleCreateJob} data-testid="button-create-job">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Job
+          </Button>
+        )}
       </div>
 
       {/* Dashboard Tabs */}
@@ -128,10 +132,12 @@ export default function Dashboard() {
                 ) : (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">No jobs yet</p>
-                    <Button onClick={handleCreateJob} variant="outline">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Your First Job
-                    </Button>
+                    {canCreate('jobs') && (
+                      <Button onClick={handleCreateJob} variant="outline">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Your First Job
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>

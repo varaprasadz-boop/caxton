@@ -17,6 +17,7 @@ import Departments from "@/pages/Departments";
 import Employees from "@/pages/Employees";
 import EmployeeDetail from "@/pages/EmployeeDetail";
 import Machines from "@/pages/Machines";
+import Roles from "@/pages/Roles";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
@@ -24,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import type { Permissions } from "@shared/schema";
 
 function Router() {
   return (
@@ -38,6 +40,7 @@ function Router() {
       <Route path="/employees" component={Employees} />
       <Route path="/employees/:id" component={EmployeeDetail} />
       <Route path="/machines" component={Machines} />
+      <Route path="/roles" component={Roles} />
       <Route path="/reports" component={Reports} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
@@ -45,12 +48,14 @@ function Router() {
   );
 }
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
   departmentId: string | null;
   role: 'admin' | 'employee';
+  roleId: string | null;
+  permissions: Permissions | null;
 }
 
 function AuthenticatedApp() {

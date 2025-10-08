@@ -10,6 +10,7 @@ import { Plus, Search, Filter } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Job, Client } from "@shared/schema";
 import { format } from "date-fns";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -17,6 +18,7 @@ export default function Jobs() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [, setLocation] = useLocation();
+  const { canCreate } = usePermissions();
 
   // Fetch real data
   const { data: jobs = [] } = useQuery<Job[]>({
@@ -79,10 +81,12 @@ export default function Jobs() {
             Manage your printing jobs and track their progress
           </p>
         </div>
-        <Button onClick={handleCreateJob} data-testid="button-create-job">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Job
-        </Button>
+        {canCreate('jobs') && (
+          <Button onClick={handleCreateJob} data-testid="button-create-job">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Job
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -137,10 +141,12 @@ export default function Jobs() {
           <p className="text-sm text-muted-foreground mb-6">
             Create your first job to get started with the workflow management
           </p>
-          <Button onClick={handleCreateJob} data-testid="button-create-first-job">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Your First Job
-          </Button>
+          {canCreate('jobs') && (
+            <Button onClick={handleCreateJob} data-testid="button-create-first-job">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Your First Job
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import tenJumpLogo from "@assets/image_1759820515160.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -17,20 +18,9 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
- const API_URL = import.meta.env.VITE_API_URL;
 
     try {
-      // const res = await apiRequest("POST", "/api/login", { email, password });
-      const res = await fetch(`${API_URL}/api/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include", // 👈 send session cookies
-      body: JSON.stringify({ email, password }),
-    });
-
-      const user = await res.json();
+      const user = await apiRequest("POST", "/api/login", { email, password });
 
       toast({
         title: "Welcome back!",
@@ -56,8 +46,16 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md" data-testid="card-login">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Caxton PHP</CardTitle>
+        <CardHeader className="space-y-4">
+          <div className="flex justify-center">
+            <div className="bg-black rounded-md p-4">
+              <img 
+                src={tenJumpLogo} 
+                alt="TenJump" 
+                className="h-16 w-auto"
+              />
+            </div>
+          </div>
           <CardDescription className="text-center">
             Sign in to your account to continue
           </CardDescription>
