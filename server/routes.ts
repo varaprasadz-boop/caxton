@@ -1232,6 +1232,272 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Removed duplicate getWorkflowStages function - now using the one from shared/schema
 
+  // Reports routes
+  app.get("/api/reports/jobs", requireAuth, async (req, res) => {
+    try {
+      const jobs = await storage.getJobs();
+      const tasks = await storage.getTasks();
+      const clients = await storage.getClients();
+      const departments = await storage.getDepartments();
+
+      const now = new Date();
+      const clientMap = new Map(clients.map(c => [c.id, c]));
+      const departmentMap = new Map(departments.map((d: any) => [d.id, d]));
+
+      const jobsWithDetails = jobs.map(job => {
+        const jobTasks = tasks.filter(t => t.jobId === job.id);
+        const completedTasks = jobTasks.filter(t => t.status === "completed").length;
+        const totalTasks = jobTasks.length;
+        const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+        const isOverdue = new Date(job.deadline) < now && !["completed", "delivered"].includes(job.status);
+        const daysUntilDeadline = Math.ceil((new Date(job.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        return {
+          id: job.id,
+          jobType: job.jobType,
+          description: job.description,
+          client: clientMap.get(job.clientId)?.name || "Unknown",
+          clientCompany: clientMap.get(job.clientId)?.company,
+          quantity: job.quantity,
+          status: job.status,
+          deadline: job.deadline,
+          createdAt: job.createdAt,
+          progress,
+          completedTasks,
+          totalTasks,
+          isOverdue,
+          daysUntilDeadline,
+          currentStage: jobTasks.find(t => t.status === "in-progress")
+            ? departmentMap.get(jobTasks.find(t => t.status === "in-progress")!.departmentId)?.name
+            : null
+        };
+      });
+
+      const summary = {
+        totalJobs: jobs.length,
+        activeJobs: jobs.filter(j => !["completed", "delivered"].includes(j.status)).length,
+        completedJobs: jobs.filter(j => ["completed", "delivered"].includes(j.status)).length,
+        overdueJobs: jobs.filter(j => new Date(j.deadline) < now && !["completed", "delivered"].includes(j.status)).length,
+        byStatus: jobs.reduce((acc, job) => {
+          acc[job.status] = (acc[job.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        byJobType: jobs.reduce((acc, job) => {
+          acc[job.jobType] = (acc[job.jobType] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      };
+
+      res.json({ jobs: jobsWithDetails, summary });
+    } catch (error) {
+      console.error("Jobs report error:", error);
+      res.status(500).json({ error: "Failed to generate jobs report" });
+    }
+  });
+
+  app.get("/api/reports/performance", requireAuth, async (req, res) => {
+    try {
+      const employees = await storage.getEmployees();
+      const tasks = await storage.getTasks();
+      const departments = await storage.getDepartments();
+      const jobs = await storage.getJobs();
+
+      const now = new Date();
+      const departmentMap = new Map(departments.map((d: any) => [d.id, d]));
+      const jobMap = new Map(jobs.map(j => [j.id, j]));
+
+      const employeePerformance = employees.map(employee => {
+        const employeeTasks = tasks.filter(t => t.employeeId === employee.id);
+        const completedTasks = employeeTasks.filter(t => t.status === "completed");
+        const activeTasks = employeeTasks.filter(t => !["completed", "in-queue"].includes(t.status));
+        const overdueTasks = employeeTasks.filter(t =>
+          new Date(t.deadline) < now && t.status !== "completed"
+        );
+
+        const completedOnTime = completedTasks.filter(t => {
+          const job = jobMap.get(t.jobId);
+          return job && new Date(job.deadline) >= now;
+        }).length;
+
+        const onTimeRate = completedTasks.length > 0
+          ? (completedOnTime / completedTasks.length) * 100
+          : 0;
+
+        return {
+          employeeId: employee.id,
+          name: employee.name,
+          email: employee.email,
+          department: employee.departmentId ? departmentMap.get(employee.departmentId)?.name : "Unassigned",
+          totalTasks: employeeTasks.length,
+          completedTasks: completedTasks.length,
+          activeTasks: activeTasks.length,
+          overdueTasks: overdueTasks.length,
+          completionRate: employeeTasks.length > 0
+            ? (completedTasks.length / employeeTasks.length) * 100
+            : 0,
+          onTimeRate
+        };
+      });
+
+      const departmentPerformance = departments.map((dept: any) => {
+        const deptTasks = tasks.filter(t => t.departmentId === dept.id);
+        const completedTasks = deptTasks.filter(t => t.status === "completed");
+        const activeTasks = deptTasks.filter(t => !["completed", "in-queue"].includes(t.status));
+        const deptEmployees = employees.filter(e => e.departmentId === dept.id);
+
+        return {
+          departmentId: dept.id,
+          name: dept.name,
+          employeeCount: deptEmployees.length,
+          totalTasks: deptTasks.length,
+          completedTasks: completedTasks.length,
+          activeTasks: activeTasks.length,
+          completionRate: deptTasks.length > 0
+            ? (completedTasks.length / deptTasks.length) * 100
+            : 0
+        };
+      });
+
+      res.json({
+        employees: employeePerformance,
+        departments: departmentPerformance
+      });
+    } catch (error) {
+      console.error("Performance report error:", error);
+      res.status(500).json({ error: "Failed to generate performance report" });
+    }
+  });
+
+  app.get("/api/reports/timeline", requireAuth, async (req, res) => {
+    try {
+      const jobs = await storage.getJobs();
+      const tasks = await storage.getTasks();
+      const clients = await storage.getClients();
+      const departments = await storage.getDepartments();
+
+      const now = new Date();
+      const clientMap = new Map(clients.map(c => [c.id, c]));
+      const departmentMap = new Map(departments.map((d: any) => [d.id, d]));
+
+      const timelineData = jobs.map(job => {
+        const jobTasks = tasks.filter(t => t.jobId === job.id).sort((a, b) => a.order - b.order);
+        const daysUntilDeadline = Math.ceil((new Date(job.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const isOverdue = daysUntilDeadline < 0 && !["completed", "delivered"].includes(job.status);
+
+        const taskTimeline = jobTasks.map(task => ({
+          stage: departmentMap.get(task.departmentId)?.name || "Unknown",
+          status: task.status,
+          deadline: task.deadline,
+          isOverdue: new Date(task.deadline) < now && task.status !== "completed",
+          daysUntilDeadline: Math.ceil((new Date(task.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        }));
+
+        const completedTasks = jobTasks.filter(t => t.status === "completed").length;
+        const totalDuration = job.createdAt
+          ? Math.ceil((new Date(job.deadline).getTime() - new Date(job.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+
+        return {
+          jobId: job.id,
+          jobType: job.jobType,
+          description: job.description,
+          client: clientMap.get(job.clientId)?.name || "Unknown",
+          status: job.status,
+          deadline: job.deadline,
+          createdAt: job.createdAt,
+          daysUntilDeadline,
+          isOverdue,
+          totalDuration,
+          progress: jobTasks.length > 0 ? (completedTasks / jobTasks.length) * 100 : 0,
+          tasks: taskTimeline
+        };
+      });
+
+      const upcomingDeadlines = timelineData
+        .filter(j => !["completed", "delivered"].includes(j.status) && j.daysUntilDeadline >= 0)
+        .sort((a, b) => a.daysUntilDeadline - b.daysUntilDeadline)
+        .slice(0, 10);
+
+      const overdueJobs = timelineData
+        .filter(j => j.isOverdue)
+        .sort((a, b) => a.daysUntilDeadline - b.daysUntilDeadline);
+
+      res.json({
+        timeline: timelineData,
+        upcomingDeadlines,
+        overdueJobs
+      });
+    } catch (error) {
+      console.error("Timeline report error:", error);
+      res.status(500).json({ error: "Failed to generate timeline report" });
+    }
+  });
+
+  app.get("/api/reports/clients", requireAuth, async (req, res) => {
+    try {
+      const clients = await storage.getClients();
+      const jobs = await storage.getJobs();
+      const tasks = await storage.getTasks();
+
+      const now = new Date();
+      const jobMap = new Map(jobs.map(j => [j.id, j]));
+
+      const clientStats = clients.map(client => {
+        const clientJobs = jobs.filter(j => j.clientId === client.id);
+        const activeJobs = clientJobs.filter(j => !["completed", "delivered"].includes(j.status));
+        const completedJobs = clientJobs.filter(j => ["completed", "delivered"].includes(j.status));
+        const overdueJobs = clientJobs.filter(j =>
+          new Date(j.deadline) < now && !["completed", "delivered"].includes(j.status)
+        );
+
+        const totalQuantity = clientJobs.reduce((sum, job) => sum + job.quantity, 0);
+
+        const jobTypeBreakdown = clientJobs.reduce((acc, job) => {
+          acc[job.jobType] = (acc[job.jobType] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const lastJobDate = clientJobs.length > 0
+          ? new Date(Math.max(...clientJobs.map(j => new Date(j.createdAt || 0).getTime())))
+          : null;
+
+        return {
+          clientId: client.id,
+          name: client.name,
+          company: client.company,
+          email: client.email,
+          phone: client.phone,
+          paymentMethod: client.paymentMethod,
+          totalJobs: clientJobs.length,
+          activeJobs: activeJobs.length,
+          completedJobs: completedJobs.length,
+          overdueJobs: overdueJobs.length,
+          totalQuantity,
+          jobTypeBreakdown,
+          lastJobDate
+        };
+      }).sort((a, b) => b.totalJobs - a.totalJobs);
+
+      const topClients = clientStats.slice(0, 10);
+
+      const summary = {
+        totalClients: clients.length,
+        activeClients: clientStats.filter(c => c.activeJobs > 0).length,
+        totalJobsAllClients: jobs.length,
+        avgJobsPerClient: clients.length > 0 ? jobs.length / clients.length : 0
+      };
+
+      res.json({
+        clients: clientStats,
+        topClients,
+        summary
+      });
+    } catch (error) {
+      console.error("Client report error:", error);
+      res.status(500).json({ error: "Failed to generate client report" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
