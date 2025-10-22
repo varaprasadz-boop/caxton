@@ -11,11 +11,30 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  customHeaders?: Record<string, string | undefined>
 ): Promise<Response> {
+  // Detect FormData - don't set Content-Type header, let browser handle it
+  const isFormData = data instanceof FormData;
+  
+  // Build headers - skip Content-Type for FormData
+  const headers: Record<string, string> = {};
+  if (data && !isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  // Apply custom headers (allow 'Content-Type': undefined to skip it)
+  if (customHeaders) {
+    Object.entries(customHeaders).forEach(([key, value]) => {
+      if (value !== undefined) {
+        headers[key] = value;
+      }
+    });
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body: data ? (isFormData ? data : JSON.stringify(data)) : undefined,
     credentials: "include",
   });
 

@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import tenJumpLogo from "@assets/image_1759820515160.png";
+import { useQuery } from "@tanstack/react-query";
+import type { CompanySettings } from "@shared/schema";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -15,12 +16,17 @@ export default function Login() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
+  const { data: companySettings } = useQuery<CompanySettings>({
+    queryKey: ["/api/company-settings"],
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const user = await apiRequest("POST", "/api/login", { email, password });
+      const res = await apiRequest("POST", "/api/login", { email, password });
+      const user = await res.json();
 
       toast({
         title: "Welcome back!",
@@ -48,13 +54,18 @@ export default function Login() {
       <Card className="w-full max-w-md" data-testid="card-login">
         <CardHeader className="space-y-4">
           <div className="flex justify-center">
-            <div className="bg-black rounded-md p-4">
+            {companySettings?.logoUrl ? (
               <img 
-                src={tenJumpLogo} 
-                alt="TenJump" 
-                className="h-16 w-auto"
+                src={companySettings.logoUrl} 
+                alt={companySettings.companyName || "Company Logo"} 
+                className="h-16 w-auto max-w-full object-contain"
+                data-testid="img-company-logo"
               />
-            </div>
+            ) : (
+              <h1 className="text-2xl font-bold" data-testid="text-company-name">
+                {companySettings?.companyName || "Caxton PHP"}
+              </h1>
+            )}
           </div>
           <CardDescription className="text-center">
             Sign in to your account to continue

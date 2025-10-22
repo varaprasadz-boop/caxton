@@ -25,8 +25,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import type { Employee, Permissions, PermissionModule } from "@/../../shared/schema";
-import tenJumpLogo from "@assets/image_1759820515160.png";
+import type { Employee, Permissions, PermissionModule, CompanySettings } from "@/../../shared/schema";
 
 interface MenuItem {
   title: string;
@@ -106,6 +105,10 @@ export default function AppSidebar() {
     queryKey: ["/api/me"],
   });
 
+  const { data: companySettings } = useQuery<CompanySettings>({
+    queryKey: ["/api/company-settings"],
+  });
+
   // Filter menu items based on user permissions
   const visibleMenuItems = menuItems.filter(item => {
     // Always show Dashboard
@@ -136,12 +139,19 @@ export default function AppSidebar() {
   return (
     <Sidebar data-testid="sidebar-main">
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center justify-center bg-black rounded-md p-3">
-          <img 
-            src={tenJumpLogo} 
-            alt="TenJump" 
-            className="h-12 w-auto"
-          />
+        <div className="flex items-center justify-center rounded-md p-3">
+          {companySettings?.logoUrl ? (
+            <img 
+              src={companySettings.logoUrl} 
+              alt={companySettings.companyName || "Company Logo"} 
+              className="h-12 w-auto max-w-full object-contain"
+              data-testid="img-company-logo"
+            />
+          ) : (
+            <h1 className="text-xl font-bold text-sidebar-foreground" data-testid="text-company-name">
+              {companySettings?.companyName || "Caxton PHP"}
+            </h1>
+          )}
         </div>
       </SidebarHeader>
       <SidebarContent>

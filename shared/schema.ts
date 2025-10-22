@@ -93,6 +93,15 @@ export const tasks = pgTable("tasks", {
   uniqueJobTask: uniqueIndex("unique_job_task_idx").on(table.jobId, table.taskSequence),
 }));
 
+// Company Settings table (single row for company information)
+export const companySettings = pgTable("company_settings", {
+  id: varchar("id").primaryKey().default("default"), // Single row with ID 'default'
+  companyName: text("company_name").notNull().default("Caxton PHP"),
+  address: text("address"),
+  logoUrl: text("logo_url"), // URL to uploaded logo in object storage
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
 // Stage deadline allocation schema
 export const stageDeadlinesSchema = z.record(z.string(), z.string().datetime()); // stage name -> ISO date string
 
@@ -139,6 +148,7 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, taskS
   status: z.enum(["pending", "in-queue", "in-progress", "completed", "delayed"]).optional(),
   delayComment: z.string().optional()
 });
+export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({ id: true, updatedAt: true }).partial();
 
 // Types
 export type InsertClient = z.infer<typeof insertClientSchema>;
@@ -155,6 +165,8 @@ export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
+export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
+export type CompanySettings = typeof companySettings.$inferSelect;
 
 // Job types enum
 export const JOB_TYPES = ["Carton", "Booklet", "Pouch Folder", "Flyers", "Business Cards", "Brochures"] as const;

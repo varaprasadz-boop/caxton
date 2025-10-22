@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { uploadMiddleware, handleFileUpload } from "./upload";
+import { uploadMiddleware, handleFileUpload, handleFileUploadRoute, multerUpload } from "./upload";
 import { requireAuth, requireAdmin, requirePermission, getUserRole } from "./auth";
 import fs from 'fs';
 import path from 'path';
@@ -15,6 +15,7 @@ import {
   insertMachineSchema,
   insertJobSchema, 
   insertTaskSchema,
+  insertCompanySettingsSchema,
   JOB_TYPES,
   type Task
 } from "@shared/schema";
@@ -114,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // File upload route
-  app.post("/api/upload", requireAuth, uploadMiddleware, handleFileUpload);
+  app.post("/api/upload", requireAuth, uploadMiddleware, handleFileUploadRoute);
 
   // File serving route for PO files (local fallback) - SECURE
   app.get("/files/:filename", requireAuth, async (req, res) => {
@@ -1495,6 +1496,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Client report error:", error);
       res.status(500).json({ error: "Failed to generate client report" });
+    }
+  });
+
+  // Company Settings routes
+  app.get("/api/company-settings", async (req, res) => {
+    try {
+      const settings = await storage.getCompanySettings();
+      res.json(settings);
+    } catch (error) {
+      console.error('Get company settings error:', error);
+      res.status(500).json({ error: "Failed to get company settings" });
+    }
+  });
+
+  app.patch("/api/company-settings", requireAdmin, async (req, res) => {
+    try {
+      const parsed = insertCompanySettingsSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid company settings data", details: parsed.error });
+      }
+      
+      const updated = await storage.updateCompanySettings(parsed.data);
+      res.json(updated);
+    } catch (error) {
+      console.error('Update company settings error:', error);
+      res.status(500).json({ error: "Failed to update company settings" });
+    }
+  });
+
+  app.post("/api/company-settings/logo", requireAdmin, multerUpload.single('logo'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Upload to object storage
+      const result = await handleFileUpload(req.file, 'public');
+      
+      // Update company settings with new logo URL
+      const updated = await storage.updateCompanySettings({ logoUrl: result.url });
+      
+      res.json({ url: result.url, settings: updated });
+    } catch (error) {
+      console.error('Upload logo error:', error);
+      res.status(500).json({ error: "Failed to upload logo" });
     }
   });
 

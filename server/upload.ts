@@ -23,16 +23,17 @@ const upload = multer({
 });
 
 export const uploadMiddleware = upload.single('file');
+export { upload as multerUpload };
 
 // Try object storage first, fall back to local storage if it fails
-async function uploadToObjectStorage(fileBuffer: Buffer, fileName: string): Promise<string> {
+async function uploadToObjectStorage(fileBuffer: Buffer, fileName: string, directory: 'public' | '.private' = '.private'): Promise<string> {
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!bucketId) {
     throw new Error('Object storage not configured');
   }
   
   const objectStorage = new Client();
-  const objectPath = `.private/${fileName}`;
+  const objectPath = `${directory}/${fileName}`;
   await objectStorage.uploadFromBytes(objectPath, fileBuffer);
   return `/files/${fileName}`;
 }
@@ -51,13 +52,8 @@ async function uploadToLocalStorage(fileBuffer: Buffer, fileName: string): Promi
   return `/files/${fileName}`;
 }
 
-export async function handleFileUpload(req: Request, res: Response) {
+export async function handleFileUpload(file: Express.Multer.File, directory: 'public' | '.private' = '.private'): Promise<{ url: string; filename: string; size: number }> {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file provided' });
-    }
-
-    const file = req.file;
     const fileExtension = file.originalname.split('.').pop() || '';
     const fileName = `${uuidv4()}.${fileExtension}`;
     
@@ -66,21 +62,36 @@ export async function handleFileUpload(req: Request, res: Response) {
     // Try object storage first, fall back to local storage
     try {
       console.log(`Attempting object storage upload: ${fileName}`);
-      fileUrl = await uploadToObjectStorage(file.buffer, fileName);
+      fileUrl = await uploadToObjectStorage(file.buffer, fileName, directory);
       console.log(`File uploaded to object storage: ${fileName}`);
-    } catch (objectStorageError) {
-      console.warn(`Object storage failed, using local fallback:`, objectStorageError.message);
+    } catch (objectStorageError: any) {
+      console.warn(`Object storage failed, using local fallback:`, objectStorageError?.message || 'Unknown error');
       fileUrl = await uploadToLocalStorage(file.buffer, fileName);
     }
     
-    res.json({
+    return {
       url: fileUrl,
       filename: file.originalname,
       size: file.size
-    });
+    };
     
   } catch (error) {
     console.error('File upload error:', error);
-    res.status(500).json({ error: 'Failed to upload file: ' + (error instanceof Error ? error.message : 'Unknown error') });
+    throw new Error('Failed to upload file: ' + (error instanceof Error ? error.message : 'Unknown error'));
+  }
+}
+
+export async function handleFileUploadRoute(req: Request, res: Response) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const result = await handleFileUpload(req.file);
+    res.json(result);
+    
+  } catch (error) {
+    console.error('File upload error:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 }

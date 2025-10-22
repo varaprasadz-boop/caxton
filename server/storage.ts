@@ -13,13 +13,16 @@ import {
   type InsertJob,
   type Task,
   type InsertTask,
+  type CompanySettings,
+  type InsertCompanySettings,
   clients,
   departments,
   roles,
   employees,
   machines,
   jobs,
-  tasks
+  tasks,
+  companySettings
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { eq, max } from "drizzle-orm";
@@ -76,6 +79,10 @@ export interface IStorage {
   getTasksByJobId(jobId: string): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, updates: Partial<Pick<Task, 'status' | 'employeeId' | 'remarks'>>): Promise<Task | undefined>;
+  
+  // Company Settings
+  getCompanySettings(): Promise<CompanySettings | undefined>;
+  updateCompanySettings(updates: Partial<InsertCompanySettings>): Promise<CompanySettings | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -347,6 +354,29 @@ export class MemStorage implements IStorage {
     this.tasks.set(id, updatedTask);
     return updatedTask;
   }
+
+  // Company Settings
+  private companySettings: CompanySettings = {
+    id: 'default',
+    companyName: 'Caxton PHP',
+    address: null,
+    logoUrl: null,
+    updatedAt: new Date()
+  };
+
+  async getCompanySettings(): Promise<CompanySettings | undefined> {
+    return this.companySettings;
+  }
+
+  async updateCompanySettings(updates: Partial<InsertCompanySettings>): Promise<CompanySettings | undefined> {
+    this.companySettings = {
+      ...this.companySettings,
+      ...updates,
+      id: 'default',
+      updatedAt: new Date()
+    };
+    return this.companySettings;
+  }
 }
 
 // PostgreSQL Storage Implementation
@@ -532,6 +562,20 @@ export class PostgreSQLStorage implements IStorage {
       ...updates,
       updatedAt: new Date()
     }).where(eq(tasks.id, id)).returning();
+    return result[0] || undefined;
+  }
+
+  // Company Settings
+  async getCompanySettings(): Promise<CompanySettings | undefined> {
+    const result = await db.select().from(companySettings).where(eq(companySettings.id, 'default'));
+    return result[0] || undefined;
+  }
+
+  async updateCompanySettings(updates: Partial<InsertCompanySettings>): Promise<CompanySettings | undefined> {
+    const result = await db.update(companySettings).set({
+      ...updates,
+      updatedAt: new Date()
+    }).where(eq(companySettings.id, 'default')).returning();
     return result[0] || undefined;
   }
 }
