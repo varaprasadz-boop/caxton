@@ -6,6 +6,7 @@ import { z } from "zod";
 // Clients table
 export const clients = pgTable("clients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientNumber: serial("client_number").notNull(), // Sequential client number for display (e.g., 10001, 10002, etc.)
   name: text("name").notNull(),
   company: text("company").notNull(),
   email: text("email").notNull(),
@@ -117,7 +118,7 @@ export type ModulePermissions = z.infer<typeof modulePermissionSchema>;
 export type Permissions = z.infer<typeof permissionsSchema>;
 
 // Insert schemas
-export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
+export const insertClientSchema = createInsertSchema(clients).omit({ id: true, clientNumber: true });
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true });
 export const insertRoleSchema = createInsertSchema(roles).omit({ id: true, createdAt: true }).extend({
   permissions: permissionsSchema,
