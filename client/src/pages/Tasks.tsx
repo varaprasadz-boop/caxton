@@ -16,9 +16,9 @@ function formatJobNumber(jobNumber: number, createdAt: string | Date | null): st
   if (!createdAt) return `CAX${String(jobNumber).padStart(4, '0')}`;
   const date = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
   const paddedNumber = String(jobNumber).padStart(4, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
-  return `CAX${paddedNumber}/${month}/${year}`;
+  const nextYear = String(year + 1).slice(-2); // Get last 2 digits of next year
+  return `CAX${paddedNumber}/${year}-${nextYear}`;
 }
 
 function formatTaskId(job: Job | undefined, taskSequence: number): string {
