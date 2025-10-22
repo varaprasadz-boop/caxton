@@ -135,6 +135,8 @@ export default function Clients() {
               <SelectItem value="all">All Payment Methods</SelectItem>
               <SelectItem value="Cash">Cash</SelectItem>
               <SelectItem value="Online">Online</SelectItem>
+              <SelectItem value="Credit">Credit</SelectItem>
+              <SelectItem value="invoice">Invoice</SelectItem>
             </SelectContent>
           </Select>
         </div>
