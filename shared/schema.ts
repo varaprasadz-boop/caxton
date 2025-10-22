@@ -77,6 +77,7 @@ export const jobs = pgTable("jobs", {
 // Tasks table
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskSequence: serial("task_sequence").notNull(), // Sequential task number for display within job
   jobId: varchar("job_id").notNull(),
   employeeId: varchar("employee_id"),
   departmentId: varchar("department_id").notNull(), // Reference to departments (replaces stage)
@@ -131,7 +132,7 @@ export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, jobNumb
   poFileUrl: z.string().min(1).optional(), // Allow relative URLs for local file storage
   machineIds: z.array(z.string()).optional() // Array of machine IDs
 });
-export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true }).extend({
+export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, taskSequence: true, createdAt: true, updatedAt: true }).extend({
   status: z.enum(["pending", "in-queue", "in-progress", "completed", "delayed"]).optional(),
   delayComment: z.string().optional()
 });
