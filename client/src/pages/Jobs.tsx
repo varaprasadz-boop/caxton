@@ -15,6 +15,14 @@ import { format } from "date-fns";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 
+function formatJobNumber(jobNumber: number, createdAt: Date): string {
+  const date = new Date(createdAt);
+  const paddedNumber = String(jobNumber).padStart(4, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${paddedNumber}/${month}/${year}`;
+}
+
 export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -40,10 +48,11 @@ export default function Jobs() {
   const transformedJobs = jobs.map(job => {
     const deadline = new Date(job.deadline);
     const isOverdue = deadline < new Date() && !["completed", "delivered"].includes(job.status);
+    const formattedJobNumber = formatJobNumber(job.jobNumber, job.createdAt);
     
     return {
       id: job.id,
-      title: job.description || job.jobType,
+      jobNumber: formattedJobNumber,
       client: clientMap.get(job.clientId)?.name || "Unknown Client",
       jobType: job.jobType,
       quantity: job.quantity,
@@ -55,10 +64,9 @@ export default function Jobs() {
 
   // Apply filters
   const filteredJobs = transformedJobs.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = job.jobNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.jobType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.id.toLowerCase().includes(searchTerm.toLowerCase());
+                         job.jobType.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || 
                          (statusFilter === "overdue" ? job.isOverdue : job.status === statusFilter);
     const matchesType = typeFilter === "all" || job.jobType === typeFilter;
@@ -108,7 +116,7 @@ export default function Jobs() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search jobs by ID, title, client..."
+            placeholder="Search jobs by ID, client, type..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -189,8 +197,7 @@ export default function Jobs() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[180px]">Job ID</TableHead>
-                <TableHead>Title</TableHead>
+                <TableHead className="w-[150px]">Job ID</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
@@ -208,22 +215,19 @@ export default function Jobs() {
                 >
                   <TableCell data-testid={`text-job-id-${job.id}`}>
                     <div className="flex items-center gap-2">
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {job.id}
+                      <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
+                        {job.jobNumber}
                       </code>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
-                        onClick={() => copyToClipboard(job.id, "Job ID")}
+                        onClick={() => copyToClipboard(job.jobNumber, "Job ID")}
                         data-testid={`button-copy-job-id-${job.id}`}
                       >
                         <Copy className="h-3 w-3" />
                       </Button>
                     </div>
-                  </TableCell>
-                  <TableCell className="font-medium" data-testid={`text-job-title-${job.id}`}>
-                    {job.title}
                   </TableCell>
                   <TableCell data-testid={`text-job-client-${job.id}`}>
                     {job.client}
