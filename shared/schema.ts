@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, json } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, json, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -57,6 +57,7 @@ export const machines = pgTable("machines", {
 // Jobs table
 export const jobs = pgTable("jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobNumber: serial("job_number").notNull(), // Sequential job number for display (e.g., 0001, 0002, etc.)
   clientId: varchar("client_id").notNull(),
   jobType: text("job_type").notNull(), // Carton, Booklet, Folder, etc.
   description: text("description"),
@@ -123,7 +124,7 @@ export const insertRoleSchema = createInsertSchema(roles).omit({ id: true, creat
 });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
 export const insertMachineSchema = createInsertSchema(machines).omit({ id: true, createdAt: true });
-export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true }).extend({
+export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, jobNumber: true, createdAt: true }).extend({
   status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional(),
   stageDeadlines: stageDeadlinesSchema.optional(),
   poFileUrl: z.string().min(1).optional(), // Allow relative URLs for local file storage
