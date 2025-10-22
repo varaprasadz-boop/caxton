@@ -13,6 +13,11 @@ import type { Client } from "@shared/schema";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 
+function formatClientNumber(clientNumber: number): string {
+  const paddedNumber = String(clientNumber + 10000).padStart(5, '0');
+  return `C${paddedNumber}`;
+}
+
 export default function Clients() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,13 +36,15 @@ export default function Clients() {
     queryKey: ["/api/jobs"]
   });
 
-  // Calculate job stats for each client
+  // Calculate job stats for each client and format client number
   const clientsWithStats = clients.map(client => {
     const clientJobs = jobs.filter((job: any) => job.clientId === client.id);
     const activeJobs = clientJobs.filter((job: any) => !["completed", "delivered"].includes(job.status)).length;
+    const formattedClientNumber = formatClientNumber(client.clientNumber);
     
     return {
       ...client,
+      formattedClientNumber,
       activeJobs,
       totalJobs: clientJobs.length
     };
@@ -49,7 +56,7 @@ export default function Clients() {
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.id.toLowerCase().includes(searchTerm.toLowerCase());
+      client.formattedClientNumber.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesJobs = jobsFilter === "all" || 
       (jobsFilter === "active" && client.activeJobs > 0) ||
@@ -173,7 +180,7 @@ export default function Clients() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[180px]">Client ID</TableHead>
+                <TableHead className="w-[120px]">Client ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Email</TableHead>
@@ -191,14 +198,14 @@ export default function Clients() {
                 >
                   <TableCell data-testid={`text-client-id-${client.id}`}>
                     <div className="flex items-center gap-2">
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {client.id}
+                      <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
+                        {client.formattedClientNumber}
                       </code>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
-                        onClick={() => copyToClipboard(client.id, "Client ID")}
+                        onClick={() => copyToClipboard(client.formattedClientNumber, "Client ID")}
                         data-testid={`button-copy-client-id-${client.id}`}
                       >
                         <Copy className="h-3 w-3" />
