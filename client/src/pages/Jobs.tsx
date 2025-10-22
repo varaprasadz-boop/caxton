@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import JobCard from "@/components/JobCard";
 import CreateJobForm from "@/components/CreateJobForm";
 import Modal from "@/components/Modal";
+import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Eye, Package, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Job, Client } from "@shared/schema";
 import { format } from "date-fns";
@@ -32,17 +34,34 @@ export default function Jobs() {
   // Create client lookup map
   const clientMap = new Map(clients.map(c => [c.id, c]));
 
-  // Transform jobs for JobCard component
-  const transformedJobs = jobs.map(job => ({
-    id: job.id,
-    title: job.description || job.jobType,
-    client: clientMap.get(job.clientId)?.name || "Unknown Client",
-    jobType: job.jobType,
-    quantity: job.quantity,
-    deadline: new Date(job.deadline),
-    status: job.status,
-    description: job.description || undefined // Convert null to undefined for JobCard compatibility
-  }));
+  // Transform jobs for display
+  const transformedJobs = jobs.map(job => {
+    const deadline = new Date(job.deadline);
+    const isOverdue = deadline < new Date() && !["completed", "delivered"].includes(job.status);
+    
+    return {
+      id: job.id,
+      title: job.description || job.jobType,
+      client: clientMap.get(job.clientId)?.name || "Unknown Client",
+      jobType: job.jobType,
+      quantity: job.quantity,
+      deadline: deadline,
+      status: job.status,
+      isOverdue
+    };
+  });
+
+  // Apply filters
+  const filteredJobs = transformedJobs.filter(job => {
+    const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         job.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         job.jobType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         job.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || 
+                         (statusFilter === "overdue" ? job.isOverdue : job.status === statusFilter);
+    const matchesType = typeFilter === "all" || job.jobType === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
+  });
 
   const handleCreateJob = () => {
     setIsCreateJobModalOpen(true);
@@ -54,21 +73,6 @@ export default function Jobs() {
 
   const handleViewJob = (id: string) => {
     setLocation(`/jobs/${id}`);
-  };
-
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
-    console.log('Searching for:', value);
-  };
-
-  const handleStatusFilter = (value: string) => {
-    setStatusFilter(value);
-    console.log('Filtering by status:', value);
-  };
-
-  const handleTypeFilter = (value: string) => {
-    setTypeFilter(value);
-    console.log('Filtering by type:', value);
   };
 
   return (
@@ -94,16 +98,16 @@ export default function Jobs() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search jobs..."
+            placeholder="Search jobs by ID, title, client..."
             value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
             data-testid="input-search-jobs"
           />
         </div>
         
         <div className="flex gap-2">
-          <Select value={statusFilter} onValueChange={handleStatusFilter}>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40" data-testid="select-status-filter">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -112,12 +116,19 @@ export default function Jobs() {
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="pre-press">Pre-Press</SelectItem>
               <SelectItem value="printing">Printing</SelectItem>
+              <SelectItem value="cutting">Cutting</SelectItem>
+              <SelectItem value="folding">Folding</SelectItem>
+              <SelectItem value="binding">Binding</SelectItem>
+              <SelectItem value="qc">QC</SelectItem>
+              <SelectItem value="packaging">Packaging</SelectItem>
+              <SelectItem value="dispatch">Dispatch</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="overdue">Overdue</SelectItem>
             </SelectContent>
           </Select>
 
-          <Select value={typeFilter} onValueChange={handleTypeFilter}>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-40" data-testid="select-type-filter">
               <SelectValue placeholder="Job Type" />
             </SelectTrigger>
@@ -128,13 +139,13 @@ export default function Jobs() {
               <SelectItem value="Booklet">Booklet</SelectItem>
               <SelectItem value="Flyers">Flyers</SelectItem>
               <SelectItem value="Carton">Carton</SelectItem>
+              <SelectItem value="Pouch Folder">Pouch Folder</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* Jobs Grid */}
-      {/* Job Grid */}
+      {/* Jobs Table */}
       {transformedJobs.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">No jobs found</p>
@@ -148,25 +159,77 @@ export default function Jobs() {
             </Button>
           )}
         </div>
+      ) : filteredJobs.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">No jobs found matching your filters</p>
+          <Button variant="outline" onClick={() => {
+            setSearchTerm("");
+            setStatusFilter("all");
+            setTypeFilter("all");
+          }}>
+            Clear Filters
+          </Button>
+        </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {transformedJobs
-            .filter(job => {
-              const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                 job.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                 job.jobType.toLowerCase().includes(searchTerm.toLowerCase());
-              const matchesStatus = statusFilter === "all" || job.status === statusFilter;
-              const matchesType = typeFilter === "all" || job.jobType === typeFilter;
-              return matchesSearch && matchesStatus && matchesType;
-            })
-            .map(job => (
-              <JobCard
-                key={job.id}
-                {...job}
-                onView={handleViewJob}
-              />
-            ))
-          }
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[120px]">Job ID</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Quantity</TableHead>
+                <TableHead>Deadline</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-[80px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredJobs.map((job) => (
+                <TableRow 
+                  key={job.id} 
+                  className={job.isOverdue ? "bg-destructive/5" : ""}
+                  data-testid={`row-job-${job.id}`}
+                >
+                  <TableCell className="font-mono text-xs" data-testid={`text-job-id-${job.id}`}>
+                    {job.id.slice(0, 8)}...
+                  </TableCell>
+                  <TableCell className="font-medium">{job.title}</TableCell>
+                  <TableCell>{job.client}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      <Package className="h-3 w-3 mr-1" />
+                      {job.jobType}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{job.quantity.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <div className={`flex items-center gap-1 text-sm ${job.isOverdue ? "text-destructive font-semibold" : ""}`}>
+                      <Calendar className="h-3 w-3" />
+                      {format(job.deadline, "MMM dd, yyyy")}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge 
+                      status={job.isOverdue ? "overdue" : job.status} 
+                      variant="job" 
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleViewJob(job.id)}
+                      data-testid={`button-view-job-${job.id}`}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
