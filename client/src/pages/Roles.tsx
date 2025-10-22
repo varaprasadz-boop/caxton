@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Pencil, Trash2, Shield } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -129,49 +130,70 @@ export default function Roles() {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredRoles.map(role => (
-          <Card key={role.id} data-testid={`card-role-${role.id}`}>
-            <CardHeader className="gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  <CardTitle>{role.name}</CardTitle>
-                </div>
-                <div className="flex gap-2">
-                  {canEdit('roles') && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => setEditingRole(role)}
-                      data-testid={`button-edit-role-${role.id}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {canDelete('roles') && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => deleteMutation.mutate(role.id)}
-                      data-testid={`button-delete-role-${role.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              {role.description && (
-                <CardDescription>{role.description}</CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {countPermissions(role.permissions)} permissions granted
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="rounded-md border">
+        {filteredRoles.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[60px]"></TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="w-[150px]">Permissions</TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRoles.map(role => (
+                <TableRow key={role.id} data-testid={`row-role-${role.id}`}>
+                  <TableCell>
+                    <Shield className="h-5 w-5 text-primary" />
+                  </TableCell>
+                  <TableCell data-testid={`text-role-name-${role.id}`}>
+                    <span className="font-medium">{role.name}</span>
+                  </TableCell>
+                  <TableCell data-testid={`text-role-description-${role.id}`}>
+                    <span className="text-sm text-muted-foreground">
+                      {role.description || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell data-testid={`text-role-permissions-${role.id}`}>
+                    <Badge variant="secondary">
+                      {countPermissions(role.permissions)} granted
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {canEdit('roles') && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEditingRole(role)}
+                          data-testid={`button-edit-role-${role.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDelete('roles') && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => deleteMutation.mutate(role.id)}
+                          data-testid={`button-delete-role-${role.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No roles found</p>
+          </div>
+        )}
       </div>
 
       <RoleFormDialog

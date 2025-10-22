@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -111,48 +111,66 @@ export default function Machines() {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredMachines.map(machine => (
-          <Card key={machine.id} data-testid={`card-machine-${machine.id}`}>
-            <CardHeader className="gap-2">
-              <div className="flex items-center justify-between">
-                <CardTitle>{machine.name}</CardTitle>
-                <div className="flex gap-2">
-                  {canEdit('machines') && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => setEditingMachine(machine)}
-                      data-testid={`button-edit-machine-${machine.id}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {canDelete('machines') && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => deleteMutation.mutate(machine.id)}
-                      data-testid={`button-delete-machine-${machine.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div>
-                <Badge variant="secondary" data-testid={`badge-department-${machine.id}`}>
-                  {getDepartmentName(machine.departmentId)}
-                </Badge>
-              </div>
-            </CardHeader>
-            {machine.description && (
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{machine.description}</p>
-              </CardContent>
-            )}
-          </Card>
-        ))}
+      <div className="rounded-md border">
+        {filteredMachines.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredMachines.map(machine => (
+                <TableRow key={machine.id} data-testid={`row-machine-${machine.id}`}>
+                  <TableCell data-testid={`text-machine-name-${machine.id}`}>
+                    <span className="font-medium">{machine.name}</span>
+                  </TableCell>
+                  <TableCell data-testid={`badge-machine-department-${machine.id}`}>
+                    <Badge variant="secondary">
+                      {getDepartmentName(machine.departmentId)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell data-testid={`text-machine-description-${machine.id}`}>
+                    <span className="text-sm text-muted-foreground">
+                      {machine.description || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {canEdit('machines') && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEditingMachine(machine)}
+                          data-testid={`button-edit-machine-${machine.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDelete('machines') && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => deleteMutation.mutate(machine.id)}
+                          data-testid={`button-delete-machine-${machine.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No machines found</p>
+          </div>
+        )}
       </div>
 
       <MachineFormDialog

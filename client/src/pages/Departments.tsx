@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -100,44 +100,64 @@ export default function Departments() {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredDepartments.map(department => (
-          <Card key={department.id} data-testid={`card-department-${department.id}`}>
-            <CardHeader className="gap-2">
-              <div className="flex items-center justify-between">
-                <CardTitle>{department.name}</CardTitle>
-                <div className="flex gap-2">
-                  {canEdit('departments') && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => setEditingDepartment(department)}
-                      data-testid={`button-edit-department-${department.id}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {canDelete('departments') && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => deleteMutation.mutate(department.id)}
-                      data-testid={`button-delete-department-${department.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <CardDescription>Order: {department.order}</CardDescription>
-            </CardHeader>
-            {department.description && (
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{department.description}</p>
-              </CardContent>
-            )}
-          </Card>
-        ))}
+      <div className="rounded-md border">
+        {filteredDepartments.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="w-[100px]">Order</TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredDepartments.map(department => (
+                <TableRow key={department.id} data-testid={`row-department-${department.id}`}>
+                  <TableCell data-testid={`text-department-name-${department.id}`}>
+                    <span className="font-medium">{department.name}</span>
+                  </TableCell>
+                  <TableCell data-testid={`text-department-description-${department.id}`}>
+                    <span className="text-sm text-muted-foreground">
+                      {department.description || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell data-testid={`text-department-order-${department.id}`}>
+                    <span className="text-sm">{department.order}</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {canEdit('departments') && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEditingDepartment(department)}
+                          data-testid={`button-edit-department-${department.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDelete('departments') && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => deleteMutation.mutate(department.id)}
+                          data-testid={`button-delete-department-${department.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No departments found</p>
+          </div>
+        )}
       </div>
 
       <DepartmentFormDialog

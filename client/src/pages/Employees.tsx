@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import EmployeeCard from "@/components/EmployeeCard";
 import CreateEmployeeForm from "@/components/CreateEmployeeForm";
 import EditEmployeeForm from "@/components/EditEmployeeForm";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Eye, Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Employee, Department, Task } from "@shared/schema";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -18,9 +19,8 @@ export default function Employees() {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [isCreateEmployeeModalOpen, setIsCreateEmployeeModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const { canCreate } = usePermissions();
+  const { canCreate, canEdit, canView } = usePermissions();
 
-  // Fetch real data
   const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ["/api/employees"]
   });
@@ -33,7 +33,6 @@ export default function Employees() {
     queryKey: ["/api/tasks"]
   });
 
-  // Calculate task stats for each employee
   const employeesWithStats = employees.map(employee => {
     const employeeTasks = tasks.filter((task: any) => task.employeeId === employee.id);
     const activeTasks = employeeTasks.filter((task: any) => task.status !== "completed").length;
@@ -73,7 +72,6 @@ export default function Employees() {
     setDepartmentFilter(value);
   };
 
-  // Create a map of department IDs to names for easier lookup
   const departmentMap = departments.reduce((acc, dept) => {
     acc[dept.id] = dept.name;
     return acc;
@@ -90,7 +88,6 @@ export default function Employees() {
 
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-employees">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
@@ -106,7 +103,6 @@ export default function Employees() {
         )}
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -135,40 +131,93 @@ export default function Employees() {
         </Select>
       </div>
 
-      {/* Employees Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredEmployees.map(employee => (
-          <EmployeeCard
-            key={employee.id}
-            id={employee.id}
-            name={employee.name}
-            email={employee.email}
-            phone={employee.phone || undefined}
-            activeTasks={employee.activeTasks}
-            completedTasks={employee.completedTasks}
-            department={employee.departmentId ? departmentMap[employee.departmentId] : "Unassigned"}
-            onView={handleViewEmployee}
-            onEdit={handleEditEmployee}
-          />
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {filteredEmployees.length === 0 && (searchTerm || departmentFilter !== "all") && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">
-            No employees found matching your criteria
-          </p>
-          <div className="flex gap-2 justify-center">
-            <Button variant="outline" onClick={() => setSearchTerm("")}>
-              Clear Search
-            </Button>
-            <Button variant="outline" onClick={() => setDepartmentFilter("all")}>
-              Clear Filters
-            </Button>
+      <div className="rounded-md border">
+        {filteredEmployees.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead className="w-[120px]">Active Tasks</TableHead>
+                <TableHead className="w-[120px]">Completed</TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredEmployees.map(employee => (
+                <TableRow key={employee.id} data-testid={`row-employee-${employee.id}`}>
+                  <TableCell data-testid={`text-employee-name-${employee.id}`}>
+                    <span className="font-medium">{employee.name}</span>
+                  </TableCell>
+                  <TableCell data-testid={`text-employee-email-${employee.id}`}>
+                    <span className="text-sm text-muted-foreground">{employee.email}</span>
+                  </TableCell>
+                  <TableCell data-testid={`text-employee-phone-${employee.id}`}>
+                    <span className="text-sm text-muted-foreground">
+                      {employee.phone || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell data-testid={`text-employee-department-${employee.id}`}>
+                    <Badge variant="secondary">
+                      {employee.departmentId ? departmentMap[employee.departmentId] : "Unassigned"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell data-testid={`text-employee-active-tasks-${employee.id}`}>
+                    <div className="flex items-center justify-center">
+                      <Badge variant="default">{employee.activeTasks}</Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell data-testid={`text-employee-completed-tasks-${employee.id}`}>
+                    <div className="flex items-center justify-center">
+                      <Badge variant="outline">{employee.completedTasks}</Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {canView('employees') && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleViewEmployee(employee.id)}
+                          data-testid={`button-view-employee-${employee.id}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canEdit('employees') && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleEditEmployee(employee.id)}
+                          data-testid={`button-edit-employee-${employee.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">
+              No employees found matching your criteria
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => setSearchTerm("")}>
+                Clear Search
+              </Button>
+              <Button variant="outline" onClick={() => setDepartmentFilter("all")}>
+                Clear Filters
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {employees.length === 0 && (
         <div className="text-center py-12">
@@ -182,7 +231,6 @@ export default function Employees() {
         </div>
       )}
 
-      {/* Create Employee Modal */}
       <Modal
         isOpen={isCreateEmployeeModalOpen}
         onClose={() => setIsCreateEmployeeModalOpen(false)}
@@ -194,7 +242,6 @@ export default function Employees() {
         />
       </Modal>
 
-      {/* Edit Employee Modal */}
       {editingEmployee && (
         <Modal
           isOpen={!!editingEmployee}
