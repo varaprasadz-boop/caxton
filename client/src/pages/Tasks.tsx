@@ -13,12 +13,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 function formatJobNumber(jobNumber: number, createdAt: string | Date | null): string {
-  if (!createdAt) return String(jobNumber).padStart(4, '0');
+  if (!createdAt) return `CAX${String(jobNumber).padStart(4, '0')}`;
   const date = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
   const paddedNumber = String(jobNumber).padStart(4, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
-  return `${paddedNumber}/${month}/${year}`;
+  return `CAX${paddedNumber}/${month}/${year}`;
 }
 
 function formatTaskId(job: Job | undefined, taskSequence: number): string {

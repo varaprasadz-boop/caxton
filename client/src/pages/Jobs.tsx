@@ -15,12 +15,13 @@ import { format } from "date-fns";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 
-function formatJobNumber(jobNumber: number, createdAt: Date): string {
+function formatJobNumber(jobNumber: number, createdAt: Date | null): string {
+  if (!createdAt) return `CAX${String(jobNumber).padStart(4, '0')}`;
   const date = new Date(createdAt);
   const paddedNumber = String(jobNumber).padStart(4, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
-  return `${paddedNumber}/${month}/${year}`;
+  return `CAX${paddedNumber}/${month}/${year}`;
 }
 
 export default function Jobs() {
