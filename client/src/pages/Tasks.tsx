@@ -1,12 +1,31 @@
 import { useState } from "react";
-import TaskCard from "@/components/TaskCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Filter, Calendar } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Search, Calendar, User, Clock } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Task, Employee, Job, Client, Department } from "@shared/schema";
+import { format } from "date-fns";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+function formatJobNumber(jobNumber: number, createdAt: string | Date | null): string {
+  if (!createdAt) return String(jobNumber).padStart(4, '0');
+  const date = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
+  const paddedNumber = String(jobNumber).padStart(4, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${paddedNumber}/${month}/${year}`;
+}
+
+function formatTaskId(job: Job | undefined, taskSequence: number): string {
+  if (!job) return `Unknown/${taskSequence}`;
+  const formattedJobNumber = formatJobNumber(job.jobNumber, job.createdAt);
+  return `${formattedJobNumber}/${taskSequence}`;
+}
 
 // Helper functions for date filtering
 const getDateRanges = () => {
@@ -20,7 +39,7 @@ const getDateRanges = () => {
   
   // This Week (Monday to Sunday)
   const dayOfWeek = now.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // If Sunday, go back 6 days
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const thisWeekStart = new Date(today);
   thisWeekStart.setDate(today.getDate() + mondayOffset);
   const thisWeekEnd = new Date(thisWeekStart);
@@ -48,12 +67,21 @@ const isTaskInDateRange = (taskDeadline: string | Date, range: { start: Date, en
   return deadline >= range.start && deadline < range.end;
 };
 
+const statusColors = {
+  pending: "outline",
+  "in-queue": "outline",
+  "in-progress": "default",
+  completed: "default",
+  delayed: "destructive"
+} as const;
+
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [stageFilter, setStageFilter] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [dateRangeFilter, setDateRangeFilter] = useState("all");
+  const { toast } = useToast();
 
   // Fetch data
   const { data: tasks = [] } = useQuery<Task[]>({
@@ -88,12 +116,15 @@ export default function Tasks() {
     const client = job ? clientMap.get(job.clientId) : null;
     const assignedEmployee = task.employeeId ? employeeMap.get(task.employeeId) : null;
     const department = departmentMap.get(task.departmentId);
+    const formattedTaskId = formatTaskId(job, task.taskSequence);
 
     return {
       ...task,
+      formattedTaskId,
       stage: department?.name || 'Unknown',
       jobTitle: job ? `${job.jobType} - ${client?.name || 'Unknown Client'}` : 'Unknown Job',
-      assignedEmployeeName: assignedEmployee?.name
+      assignedEmployeeName: assignedEmployee?.name,
+      job
     };
   });
 
@@ -104,7 +135,8 @@ export default function Tasks() {
   const filteredTasks = enhancedTasks.filter(task => {
     const matchesSearch = task.stage.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          task.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.assignedEmployeeName?.toLowerCase().includes(searchTerm.toLowerCase());
+                         task.assignedEmployeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         task.formattedTaskId.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;
     const matchesStage = stageFilter === "all" || task.stage === stageFilter;
     const matchesEmployee = employeeFilter === "all" || task.employeeId === employeeFilter;
@@ -144,22 +176,151 @@ export default function Tasks() {
   // Get unique stages for filter (using department names)
   const uniqueStages = departments.map(dept => dept.name);
 
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
+  // Mutation to assign employee
+  const assignEmployeeMutation = useMutation({
+    mutationFn: async ({ taskId, employeeId }: { taskId: string; employeeId: string | null }) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}`, {
+        employeeId: employeeId === "unassigned" ? null : employeeId
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Success",
+        description: "Employee assigned successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to assign employee",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Mutation to update status
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Success",
+        description: "Task status updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update task status",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleAssignEmployee = (taskId: string, employeeId: string) => {
+    assignEmployeeMutation.mutate({ taskId, employeeId });
   };
 
-  const renderTaskList = (taskList: typeof enhancedTasks, emptyMessage: string) => (
-    <div className="space-y-4">
+  const handleUpdateStatus = (taskId: string, status: string) => {
+    updateStatusMutation.mutate({ taskId, status });
+  };
+
+  const renderTaskTable = (taskList: typeof enhancedTasks, emptyMessage: string) => (
+    <div className="rounded-md border">
       {taskList.length > 0 ? (
-        taskList.map(task => (
-          <TaskCard
-            key={task.id}
-            {...task}
-            employees={employees}
-          />
-        ))
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[180px]">Task ID</TableHead>
+              <TableHead>Stage</TableHead>
+              <TableHead>Job</TableHead>
+              <TableHead>Assigned To</TableHead>
+              <TableHead>Deadline</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-[160px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {taskList.map((task) => {
+              const isOverdue = new Date(task.deadline) < new Date() && task.status !== "completed";
+              return (
+                <TableRow 
+                  key={task.id}
+                  data-testid={`row-task-${task.id}`}
+                  className={isOverdue ? "border-l-4 border-l-destructive bg-destructive/5" : ""}
+                >
+                  <TableCell data-testid={`text-task-id-${task.id}`}>
+                    <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
+                      {task.formattedTaskId}
+                    </code>
+                  </TableCell>
+                  <TableCell data-testid={`text-task-stage-${task.id}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{task.stage}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell data-testid={`text-task-job-${task.id}`}>
+                    <span className="text-sm">{task.jobTitle}</span>
+                  </TableCell>
+                  <TableCell data-testid={`select-employee-${task.id}`}>
+                    <Select
+                      value={task.employeeId || "unassigned"}
+                      onValueChange={(value) => handleAssignEmployee(task.id, value)}
+                      disabled={assignEmployeeMutation.isPending || task.status === "in-queue"}
+                    >
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {employees.map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            {employee.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell data-testid={`text-task-deadline-${task.id}`}>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
+                      <span className={`text-sm ${isOverdue ? "text-destructive font-medium" : ""}`}>
+                        {format(new Date(task.deadline), "MMM dd, yyyy")}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell data-testid={`badge-task-status-${task.id}`}>
+                    <Badge variant={statusColors[task.status as keyof typeof statusColors] || "default"}>
+                      {task.status.replace("-", " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={task.status}
+                      onValueChange={(value) => handleUpdateStatus(task.id, value)}
+                      disabled={updateStatusMutation.isPending || task.status === "in-queue"}
+                    >
+                      <SelectTrigger className="w-40" data-testid={`select-status-${task.id}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="delayed">Delayed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       ) : (
-        <div className="text-center py-8">
+        <div className="text-center py-12">
           <p className="text-muted-foreground">{emptyMessage}</p>
         </div>
       )}
@@ -183,9 +344,9 @@ export default function Tasks() {
         <div className="flex items-center space-x-2 min-w-0 flex-1">
           <Search className="h-4 w-4" />
           <Input
-            placeholder="Search tasks..."
+            placeholder="Search by Task ID, job, stage, employee..."
             value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
             data-testid="input-search-tasks"
           />
@@ -267,23 +428,23 @@ export default function Tasks() {
         </TabsList>
 
         <TabsContent value="all" className="mt-6">
-          {renderTaskList(filteredTasks, "No tasks found")}
+          {renderTaskTable(filteredTasks, "No tasks found")}
         </TabsContent>
 
         <TabsContent value="pending" className="mt-6">
-          {renderTaskList(pendingTasks, "No pending tasks")}
+          {renderTaskTable(pendingTasks, "No pending tasks")}
         </TabsContent>
 
         <TabsContent value="in-progress" className="mt-6">
-          {renderTaskList(inProgressTasks, "No tasks in progress")}
+          {renderTaskTable(inProgressTasks, "No tasks in progress")}
         </TabsContent>
 
         <TabsContent value="completed" className="mt-6">
-          {renderTaskList(completedTasks, "No completed tasks")}
+          {renderTaskTable(completedTasks, "No completed tasks")}
         </TabsContent>
 
         <TabsContent value="overdue" className="mt-6">
-          {renderTaskList(overdueTasks, "No overdue tasks")}
+          {renderTaskTable(overdueTasks, "No overdue tasks")}
         </TabsContent>
       </Tabs>
 

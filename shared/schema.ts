@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, json, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, json, serial, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -77,7 +77,7 @@ export const jobs = pgTable("jobs", {
 // Tasks table
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskSequence: serial("task_sequence").notNull(), // Sequential task number for display within job
+  taskSequence: integer("task_sequence").notNull(), // Sequential task number within a job (1, 2, 3, etc.)
   jobId: varchar("job_id").notNull(),
   employeeId: varchar("employee_id"),
   departmentId: varchar("department_id").notNull(), // Reference to departments (replaces stage)
@@ -88,7 +88,10 @@ export const tasks = pgTable("tasks", {
   order: integer("order").notNull(), // Task order in workflow
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
-});
+}, (table) => ({
+  // Ensure task sequence is unique within a job
+  uniqueJobTask: uniqueIndex("unique_job_task_idx").on(table.jobId, table.taskSequence),
+}));
 
 // Stage deadline allocation schema
 export const stageDeadlinesSchema = z.record(z.string(), z.string().datetime()); // stage name -> ISO date string

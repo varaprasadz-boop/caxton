@@ -22,7 +22,7 @@ import {
   tasks
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import { db } from "./db";
 
 // modify the interface with any CRUD methods
@@ -106,9 +106,11 @@ export class MemStorage implements IStorage {
 
   async createClient(insertClient: InsertClient): Promise<Client> {
     const id = randomUUID();
+    const nextClientNumber = this.clients.size + 1;
     const client: Client = { 
       ...insertClient, 
       id,
+      clientNumber: nextClientNumber,
       address: insertClient.address || null,
       gstNo: insertClient.gstNo || null,
       paymentMethod: insertClient.paymentMethod || "Cash"
@@ -188,7 +190,9 @@ export class MemStorage implements IStorage {
       id,
       phone: insertEmployee.phone || null,
       departmentId: insertEmployee.departmentId || null,
-      passwordHash: insertEmployee.passwordHash || null
+      passwordHash: insertEmployee.passwordHash || null,
+      role: insertEmployee.role || "employee",
+      roleId: insertEmployee.roleId || null
     };
     this.employees.set(id, employee);
     return employee;
@@ -262,9 +266,11 @@ export class MemStorage implements IStorage {
   async createJob(insertJob: InsertJob): Promise<Job> {
     const id = randomUUID();
     const createdAt = new Date();
+    const nextJobNumber = this.jobs.size + 1;
     const job: Job = { 
       ...insertJob, 
-      id, 
+      id,
+      jobNumber: nextJobNumber,
       createdAt,
       status: insertJob.status || "pending",
       description: insertJob.description || null,
@@ -272,7 +278,8 @@ export class MemStorage implements IStorage {
       colors: insertJob.colors || null,
       finishingOptions: insertJob.finishingOptions || null,
       stageDeadlines: insertJob.stageDeadlines || null,
-      poFileUrl: insertJob.poFileUrl || null
+      poFileUrl: insertJob.poFileUrl || null,
+      machineIds: insertJob.machineIds || null
     };
     this.jobs.set(id, job);
     return job;
@@ -310,9 +317,13 @@ export class MemStorage implements IStorage {
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = randomUUID();
     const createdAt = new Date();
+    // Calculate next task sequence for this job (in-memory)
+    const jobTasks = Array.from(this.tasks.values()).filter(t => t.jobId === insertTask.jobId);
+    const nextSequence = jobTasks.length + 1;
     const task: Task = { 
       ...insertTask, 
-      id, 
+      id,
+      taskSequence: nextSequence,
       createdAt,
       updatedAt: createdAt,
       employeeId: insertTask.employeeId || null,
@@ -500,7 +511,19 @@ export class PostgreSQLStorage implements IStorage {
   }
 
   async createTask(task: InsertTask): Promise<Task> {
-    const result = await db.insert(tasks).values(task).returning();
+    // Calculate the next task sequence for this job
+    const maxSequenceResult = await db
+      .select({ maxSeq: max(tasks.taskSequence) })
+      .from(tasks)
+      .where(eq(tasks.jobId, task.jobId));
+    
+    const nextSequence = (maxSequenceResult[0]?.maxSeq || 0) + 1;
+    
+    // Insert task with calculated sequence
+    const result = await db.insert(tasks).values({
+      ...task,
+      taskSequence: nextSequence
+    }).returning();
     return result[0];
   }
 
