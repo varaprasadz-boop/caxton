@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Eye, Package, Calendar, Copy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { Job, Client } from "@shared/schema";
+import type { Job, Client, Task } from "@shared/schema";
 import { format } from "date-fns";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
@@ -42,14 +42,27 @@ export default function Jobs() {
     queryKey: ["/api/clients"]
   });
 
+  const { data: tasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"]
+  });
+
   // Create client lookup map
   const clientMap = new Map(clients.map(c => [c.id, c]));
+
+  // Calculate completion percentage for each job
+  const calculateCompletion = (jobId: string): number => {
+    const jobTasks = tasks.filter(task => task.jobId === jobId);
+    if (jobTasks.length === 0) return 0;
+    const completedTasks = jobTasks.filter(task => task.status === "completed");
+    return Math.round((completedTasks.length / jobTasks.length) * 100);
+  };
 
   // Transform jobs for display
   const transformedJobs = jobs.map(job => {
     const deadline = new Date(job.deadline);
     const isOverdue = deadline < new Date() && !["completed", "delivered"].includes(job.status);
     const formattedJobNumber = formatJobNumber(job.jobNumber, job.createdAt);
+    const completionPercentage = calculateCompletion(job.id);
     
     return {
       id: job.id,
@@ -59,7 +72,8 @@ export default function Jobs() {
       quantity: job.quantity,
       deadline: deadline,
       status: job.status,
-      isOverdue
+      isOverdue,
+      completionPercentage
     };
   });
 
@@ -249,10 +263,15 @@ export default function Jobs() {
                     </div>
                   </TableCell>
                   <TableCell data-testid={`badge-job-status-${job.id}`}>
-                    <StatusBadge 
-                      status={job.isOverdue ? "overdue" : job.status} 
-                      variant="job" 
-                    />
+                    <div className="flex flex-col gap-1">
+                      <StatusBadge 
+                        status={job.isOverdue ? "overdue" : job.status} 
+                        variant="job" 
+                      />
+                      <div className="text-xs text-muted-foreground" data-testid={`text-job-completion-${job.id}`}>
+                        <span className="font-semibold text-foreground">{job.completionPercentage}%</span> Complete
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Button 
