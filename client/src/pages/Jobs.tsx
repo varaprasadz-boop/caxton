@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Package, Calendar } from "lucide-react";
+import { Plus, Search, Eye, Package, Calendar, Copy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Job, Client } from "@shared/schema";
 import { format } from "date-fns";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -21,6 +22,7 @@ export default function Jobs() {
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { canCreate } = usePermissions();
+  const { toast } = useToast();
 
   // Fetch real data
   const { data: jobs = [] } = useQuery<Job[]>({
@@ -73,6 +75,14 @@ export default function Jobs() {
 
   const handleViewJob = (id: string) => {
     setLocation(`/jobs/${id}`);
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
   };
 
   return (
@@ -162,11 +172,15 @@ export default function Jobs() {
       ) : filteredJobs.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">No jobs found matching your filters</p>
-          <Button variant="outline" onClick={() => {
-            setSearchTerm("");
-            setStatusFilter("all");
-            setTypeFilter("all");
-          }}>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setSearchTerm("");
+              setStatusFilter("all");
+              setTypeFilter("all");
+            }}
+            data-testid="button-clear-filters"
+          >
             Clear Filters
           </Button>
         </div>
@@ -175,7 +189,7 @@ export default function Jobs() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px]">Job ID</TableHead>
+                <TableHead className="w-[180px]">Job ID</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Type</TableHead>
@@ -192,25 +206,44 @@ export default function Jobs() {
                   className={job.isOverdue ? "bg-destructive/5" : ""}
                   data-testid={`row-job-${job.id}`}
                 >
-                  <TableCell className="font-mono text-xs" data-testid={`text-job-id-${job.id}`}>
-                    {job.id.slice(0, 8)}...
+                  <TableCell data-testid={`text-job-id-${job.id}`}>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {job.id}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => copyToClipboard(job.id, "Job ID")}
+                        data-testid={`button-copy-job-id-${job.id}`}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
-                  <TableCell className="font-medium">{job.title}</TableCell>
-                  <TableCell>{job.client}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium" data-testid={`text-job-title-${job.id}`}>
+                    {job.title}
+                  </TableCell>
+                  <TableCell data-testid={`text-job-client-${job.id}`}>
+                    {job.client}
+                  </TableCell>
+                  <TableCell data-testid={`badge-job-type-${job.id}`}>
                     <Badge variant="outline" className="text-xs">
                       <Package className="h-3 w-3 mr-1" />
                       {job.jobType}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">{job.quantity.toLocaleString()}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-right" data-testid={`text-job-quantity-${job.id}`}>
+                    {job.quantity.toLocaleString()}
+                  </TableCell>
+                  <TableCell data-testid={`text-job-deadline-${job.id}`}>
                     <div className={`flex items-center gap-1 text-sm ${job.isOverdue ? "text-destructive font-semibold" : ""}`}>
                       <Calendar className="h-3 w-3" />
                       {format(job.deadline, "MMM dd, yyyy")}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-testid={`badge-job-status-${job.id}`}>
                     <StatusBadge 
                       status={job.isOverdue ? "overdue" : job.status} 
                       variant="job" 

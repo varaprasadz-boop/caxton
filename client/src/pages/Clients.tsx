@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Edit, Building2, Mail, Phone, Briefcase } from "lucide-react";
+import { Plus, Search, Eye, Edit, Building2, Mail, Phone, Briefcase, Copy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Client } from "@shared/schema";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Clients() {
   const [, setLocation] = useLocation();
@@ -19,6 +20,7 @@ export default function Clients() {
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
   const { canCreate, canEdit } = usePermissions();
+  const { toast } = useToast();
 
   // Fetch real data
   const { data: clients = [] } = useQuery<Client[]>({
@@ -72,6 +74,14 @@ export default function Clients() {
 
   const handleEditClient = (id: string) => {
     console.log('Editing client:', id);
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
   };
 
   return (
@@ -144,11 +154,15 @@ export default function Clients() {
       ) : filteredClients.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">No clients found matching your filters</p>
-          <Button variant="outline" onClick={() => {
-            setSearchTerm("");
-            setJobsFilter("all");
-            setPaymentFilter("all");
-          }}>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setSearchTerm("");
+              setJobsFilter("all");
+              setPaymentFilter("all");
+            }}
+            data-testid="button-clear-filters"
+          >
             Clear Filters
           </Button>
         </div>
@@ -157,7 +171,7 @@ export default function Clients() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px]">Client ID</TableHead>
+                <TableHead className="w-[180px]">Client ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Email</TableHead>
@@ -173,34 +187,49 @@ export default function Clients() {
                   key={client.id}
                   data-testid={`row-client-${client.id}`}
                 >
-                  <TableCell className="font-mono text-xs" data-testid={`text-client-id-${client.id}`}>
-                    {client.id.slice(0, 8)}...
+                  <TableCell data-testid={`text-client-id-${client.id}`}>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {client.id}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => copyToClipboard(client.id, "Client ID")}
+                        data-testid={`button-copy-client-id-${client.id}`}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
-                  <TableCell className="font-medium">{client.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium" data-testid={`text-client-name-${client.id}`}>
+                    {client.name}
+                  </TableCell>
+                  <TableCell data-testid={`text-client-company-${client.id}`}>
                     <div className="flex items-center gap-2">
                       <Building2 className="h-3 w-3 text-muted-foreground" />
                       <span>{client.company}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-testid={`text-client-email-${client.id}`}>
                     <div className="flex items-center gap-2">
                       <Mail className="h-3 w-3 text-muted-foreground" />
                       <span className="truncate max-w-[200px]">{client.email}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-testid={`text-client-phone-${client.id}`}>
                     <div className="flex items-center gap-2">
                       <Phone className="h-3 w-3 text-muted-foreground" />
                       <span>{client.phone}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-testid={`badge-client-payment-${client.id}`}>
                     <Badge variant="outline" className="text-xs">
                       {client.paymentMethod}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-testid={`text-client-jobs-${client.id}`}>
                     <div className="flex gap-2">
                       <Badge variant="outline" className="text-xs">
                         <Briefcase className="h-3 w-3 mr-1" />
