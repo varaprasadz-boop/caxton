@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import DashboardStats from "@/components/DashboardStats";
 import DetailedStats from "@/components/DetailedStats";
 import DeadlineAlerts from "@/components/DeadlineAlerts";
@@ -16,6 +17,7 @@ import type { Job, Client } from "@shared/schema";
 
 export default function Dashboard() {
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
+  const [, setLocation] = useLocation();
   const { canCreate } = usePermissions();
 
   // Fetch real data
@@ -63,12 +65,16 @@ export default function Dashboard() {
 
   const handleViewJob = (id: string) => {
     console.log('Viewing job:', id);
-    // TODO: Navigate to job detail page
+    setLocation(`/jobs/${id}`);
   };
 
   const handleViewDeadlineItem = (id: string, type: "job" | "task") => {
     console.log('Viewing deadline item:', type, id);
-    // TODO: Navigate to appropriate detail page
+    if (type === 'job') {
+      setLocation(`/jobs/${id}`);
+    } else {
+      setLocation(`/tasks/${id}`);
+    }
   };
 
   return (
