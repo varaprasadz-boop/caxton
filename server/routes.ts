@@ -951,6 +951,13 @@ app.get("/api/me", requireAuth, async (req, res) => {
           // Advance next task from in-queue to pending
           await storage.updateTask(nextTask.id, { status: "pending" });
         }
+        
+        // Check if all tasks for this job are completed
+        const completedTasks = allJobTasks.filter((t: Task) => t.status === "completed");
+        if (completedTasks.length === allJobTasks.length) {
+          // All tasks completed, mark job as completed
+          await storage.updateJob(task.jobId, { status: "completed" });
+        }
       }
       
       res.json(task);

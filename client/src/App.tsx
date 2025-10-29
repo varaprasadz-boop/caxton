@@ -122,7 +122,6 @@ function AuthenticatedApp() {
 }
 
 function AppContent() {
-  const [location] = useLocation();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/me'],
     retry: false,
@@ -137,7 +136,7 @@ function AppContent() {
   }
 
   // Show login page if not authenticated
-  if (!user && location !== '/login') {
+  if (!user) {
     return <Login />;
   }
 
