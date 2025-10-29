@@ -67,6 +67,7 @@ export default function Jobs() {
     return {
       id: job.id,
       jobNumber: formattedJobNumber,
+      jobName: job.jobName,
       client: clientMap.get(job.clientId)?.name || "Unknown Client",
       jobType: job.jobType,
       quantity: job.quantity,
@@ -81,7 +82,8 @@ export default function Jobs() {
   const filteredJobs = transformedJobs.filter(job => {
     const matchesSearch = job.jobNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.jobType.toLowerCase().includes(searchTerm.toLowerCase());
+                         job.jobType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (job.jobName && job.jobName.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === "all" || 
                          (statusFilter === "overdue" ? job.isOverdue : job.status === statusFilter);
     const matchesType = typeFilter === "all" || job.jobType === typeFilter;
@@ -229,19 +231,26 @@ export default function Jobs() {
                   data-testid={`row-job-${job.id}`}
                 >
                   <TableCell data-testid={`text-job-id-${job.id}`}>
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
-                        {job.jobNumber}
-                      </code>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => copyToClipboard(job.jobNumber, "Job ID")}
-                        data-testid={`button-copy-job-id-${job.id}`}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
+                          {job.jobNumber}
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => copyToClipboard(job.jobNumber, "Job ID")}
+                          data-testid={`button-copy-job-id-${job.id}`}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      {job.jobName && (
+                        <div className="text-xs text-muted-foreground" data-testid={`text-job-name-${job.id}`}>
+                          {job.jobName}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell data-testid={`text-job-client-${job.id}`}>
