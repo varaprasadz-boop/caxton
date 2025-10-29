@@ -452,7 +452,7 @@ export default function Tasks() {
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="all">
-            All Tasks ({filteredTasks.length})
+            All Tasks ({sortedTasks.length})
           </TabsTrigger>
           <TabsTrigger value="pending">
             Pending ({pendingTasks.length})
@@ -469,7 +469,7 @@ export default function Tasks() {
         </TabsList>
 
         <TabsContent value="all" className="mt-6">
-          {renderTaskTable(filteredTasks, "No tasks found")}
+          {renderTaskTable(sortedTasks, "No tasks found")}
         </TabsContent>
 
         <TabsContent value="pending" className="mt-6">
