@@ -33,7 +33,7 @@ export default function Jobs() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
-  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [, setLocation] = useLocation();
   const { canCreate } = usePermissions();
