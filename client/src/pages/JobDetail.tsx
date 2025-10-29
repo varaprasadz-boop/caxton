@@ -166,6 +166,16 @@ export default function JobDetail() {
               <CardDescription>Details about this printing job</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {job.jobName && (
+                <div className="flex items-start gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Job Name</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-job-name-detail">{job.jobName}</p>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-start gap-3">
                 <Package className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>
@@ -241,6 +251,16 @@ export default function JobDetail() {
                 </div>
               )}
 
+              <div className="flex items-start gap-3">
+                <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Created Date</p>
+                  <p className="text-sm text-muted-foreground" data-testid="text-job-created-detail">
+                    {job.createdAt ? format(new Date(job.createdAt), "PPP") : 'N/A'}
+                  </p>
+                </div>
+              </div>
+              
               <div className="flex items-start gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>
