@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Package, Calendar, Copy } from "lucide-react";
+import { Plus, Search, Eye, Package, Calendar, Copy, ArrowUp, ArrowDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Job, Client, Task } from "@shared/schema";
 import { format } from "date-fns";
@@ -24,11 +24,16 @@ function formatJobNumber(jobNumber: number, createdAt: Date | null): string {
   return `CAX${paddedNumber}/${year}-${nextYear}`;
 }
 
+type SortField = 'deadline' | 'createdAt' | null;
+type SortDirection = 'asc' | 'desc';
+
 export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [, setLocation] = useLocation();
   const { canCreate } = usePermissions();
   const { toast } = useToast();
@@ -60,6 +65,7 @@ export default function Jobs() {
   // Transform jobs for display
   const transformedJobs = jobs.map(job => {
     const deadline = new Date(job.deadline);
+    const createdAt = job.createdAt ? new Date(job.createdAt) : new Date();
     const isOverdue = deadline < new Date() && !["completed", "delivered"].includes(job.status);
     const formattedJobNumber = formatJobNumber(job.jobNumber, job.createdAt);
     const completionPercentage = calculateCompletion(job.id);
@@ -72,6 +78,7 @@ export default function Jobs() {
       jobType: job.jobType,
       quantity: job.quantity,
       deadline: deadline,
+      createdAt: createdAt,
       status: job.status,
       isOverdue,
       completionPercentage
@@ -79,7 +86,7 @@ export default function Jobs() {
   });
 
   // Apply filters
-  const filteredJobs = transformedJobs.filter(job => {
+  let filteredJobs = transformedJobs.filter(job => {
     const matchesSearch = job.jobNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.jobType.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,6 +96,15 @@ export default function Jobs() {
     const matchesType = typeFilter === "all" || job.jobType === typeFilter;
     return matchesSearch && matchesStatus && matchesType;
   });
+
+  // Apply sorting
+  if (sortField) {
+    filteredJobs = [...filteredJobs].sort((a, b) => {
+      const aValue = a[sortField].getTime();
+      const bValue = b[sortField].getTime();
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    });
+  }
 
   const handleCreateJob = () => {
     setIsCreateJobModalOpen(true);
@@ -108,6 +124,17 @@ export default function Jobs() {
       title: "Copied!",
       description: `${label} copied to clipboard`,
     });
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
   };
 
   return (
@@ -214,11 +241,43 @@ export default function Jobs() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[150px]">Job ID</TableHead>
+                <TableHead className="w-[140px]">Job ID</TableHead>
+                <TableHead className="w-[180px]">Job Name</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
-                <TableHead>Deadline</TableHead>
+                <TableHead>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 p-0 hover:bg-transparent font-semibold"
+                    onClick={() => handleSort('createdAt')}
+                    data-testid="button-sort-created"
+                  >
+                    Created
+                    {sortField === 'createdAt' && (
+                      sortDirection === 'asc' ? 
+                        <ArrowUp className="ml-1 h-3 w-3" /> : 
+                        <ArrowDown className="ml-1 h-3 w-3" />
+                    )}
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 p-0 hover:bg-transparent font-semibold"
+                    onClick={() => handleSort('deadline')}
+                    data-testid="button-sort-deadline"
+                  >
+                    Deadline
+                    {sortField === 'deadline' && (
+                      sortDirection === 'asc' ? 
+                        <ArrowUp className="ml-1 h-3 w-3" /> : 
+                        <ArrowDown className="ml-1 h-3 w-3" />
+                    )}
+                  </Button>
+                </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[80px]">Actions</TableHead>
               </TableRow>
@@ -231,27 +290,27 @@ export default function Jobs() {
                   data-testid={`row-job-${job.id}`}
                 >
                   <TableCell data-testid={`text-job-id-${job.id}`}>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
-                          {job.jobNumber}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={() => copyToClipboard(job.jobNumber, "Job ID")}
-                          data-testid={`button-copy-job-id-${job.id}`}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      {job.jobName && (
-                        <div className="text-xs text-muted-foreground" data-testid={`text-job-name-${job.id}`}>
-                          {job.jobName}
-                        </div>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
+                        {job.jobNumber}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => copyToClipboard(job.jobNumber, "Job ID")}
+                        data-testid={`button-copy-job-id-${job.id}`}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
                     </div>
+                  </TableCell>
+                  <TableCell data-testid={`text-job-name-${job.id}`}>
+                    {job.jobName ? (
+                      <span className="text-sm">{job.jobName}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">No name</span>
+                    )}
                   </TableCell>
                   <TableCell data-testid={`text-job-client-${job.id}`}>
                     {job.client}
@@ -264,6 +323,12 @@ export default function Jobs() {
                   </TableCell>
                   <TableCell className="text-right" data-testid={`text-job-quantity-${job.id}`}>
                     {job.quantity.toLocaleString()}
+                  </TableCell>
+                  <TableCell data-testid={`text-job-created-${job.id}`}>
+                    <div className="flex items-center gap-1 text-sm">
+                      <Calendar className="h-3 w-3" />
+                      {format(job.createdAt, "MMM dd, yyyy")}
+                    </div>
                   </TableCell>
                   <TableCell data-testid={`text-job-deadline-${job.id}`}>
                     <div className={`flex items-center gap-1 text-sm ${job.isOverdue ? "text-destructive font-semibold" : ""}`}>
