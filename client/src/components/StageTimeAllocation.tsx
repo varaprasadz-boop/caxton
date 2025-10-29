@@ -22,6 +22,10 @@ export default function StageDeadlineAllocation({
   deliveryDeadline,
   onDeadlinesChange,
 }: StageDeadlineAllocationProps) {
+  // Normalize and validate deliveryDeadline at the top of the component
+  const deliveryDate = new Date(deliveryDeadline);
+  const isValidDeliveryDate = !isNaN(deliveryDate.getTime());
+  
   // Fetch all departments from the database
   const { data: departments = [], isLoading } = useQuery<Department[]>({
     queryKey: ["/api/departments"]
@@ -34,6 +38,7 @@ export default function StageDeadlineAllocation({
   // This ensures deletions persist and the component responds to prop changes
   useEffect(() => {
     if (sortedDepartments.length === 0) return; // Wait for departments to load
+    if (!isValidDeliveryDate) return; // Don't auto-generate if delivery date is invalid
     
     // If stageDeadlines already exists (editing mode), use those department IDs
     if (Object.keys(stageDeadlines).length > 0) {
@@ -43,29 +48,34 @@ export default function StageDeadlineAllocation({
     
     // Auto-generate default deadlines for all departments (creation mode)
     const defaultDeadlines: StageDeadlines = {};
-    const totalDays = Math.max(1, Math.ceil((deliveryDeadline.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+    const totalDays = Math.max(1, Math.ceil((deliveryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
     const daysPerDepartment = Math.max(1, Math.floor(totalDays / sortedDepartments.length));
     
     sortedDepartments.forEach((dept, index) => {
       const deadlineDate = new Date();
       deadlineDate.setDate(deadlineDate.getDate() + ((index + 1) * daysPerDepartment));
       // Ensure deadline doesn't exceed delivery deadline
-      if (deadlineDate > deliveryDeadline) {
-        deadlineDate.setTime(deliveryDeadline.getTime());
+      if (deadlineDate > deliveryDate) {
+        deadlineDate.setTime(deliveryDate.getTime());
       }
       defaultDeadlines[dept.id] = deadlineDate.toISOString();
     });
     
     onDeadlinesChange(defaultDeadlines);
-  }, [departments, jobType, deliveryDeadline]); // Depend on actual data, not length
+  }, [departments, jobType, deliveryDeadline, isValidDeliveryDate]); // Depend on actual data, not length
 
   const handleDeadlineChange = (departmentId: string, dateValue: string) => {
     if (dateValue) {
+      // Validate delivery deadline is valid before using it
+      if (!isValidDeliveryDate) {
+        alert('Invalid delivery deadline. Please set a valid delivery date first.');
+        return;
+      }
+      
       // Parse both dates as UTC midnight to avoid timezone issues
       const [year, month, day] = dateValue.split('-').map(Number);
       const selectedDate = new Date(Date.UTC(year, month - 1, day));
       
-      const deliveryDate = new Date(deliveryDeadline);
       const deliveryUTC = new Date(Date.UTC(
         deliveryDate.getFullYear(),
         deliveryDate.getMonth(),
@@ -95,15 +105,25 @@ export default function StageDeadlineAllocation({
 
   const formatDateForInput = (isoString: string) => {
     if (!isoString) return '';
-    return new Date(isoString).toISOString().split('T')[0];
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
   };
 
   const getTotalDays = () => {
     const deadlineValues = Object.values(stageDeadlines).filter(Boolean);
     if (deadlineValues.length === 0) return 0;
     
-    const earliestDate = new Date(Math.min(...deadlineValues.map(d => new Date(d).getTime())));
-    const latestDate = new Date(Math.max(...deadlineValues.map(d => new Date(d).getTime())));
+    // Filter out invalid dates before calculating min/max
+    const validDates = deadlineValues
+      .map(d => new Date(d))
+      .filter(date => !isNaN(date.getTime()))
+      .map(date => date.getTime());
+    
+    if (validDates.length === 0) return 0;
+    
+    const earliestDate = new Date(Math.min(...validDates));
+    const latestDate = new Date(Math.max(...validDates));
     
     return Math.ceil((latestDate.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24));
   };
@@ -155,7 +175,10 @@ export default function StageDeadlineAllocation({
               <div className="flex items-center gap-2 mt-1">
                 <Clock className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">
-                  {stageDeadlines[department.id] ? `Due: ${new Date(stageDeadlines[department.id]).toLocaleDateString()}` : 'No deadline set'}
+                  {stageDeadlines[department.id] ? (() => {
+                    const date = new Date(stageDeadlines[department.id]);
+                    return isNaN(date.getTime()) ? 'Invalid date' : `Due: ${date.toLocaleDateString()}`;
+                  })() : 'No deadline set'}
                 </span>
               </div>
             </div>
@@ -166,7 +189,7 @@ export default function StageDeadlineAllocation({
                 type="date"
                 value={formatDateForInput(stageDeadlines[department.id])}
                 onChange={(e) => handleDeadlineChange(department.id, e.target.value)}
-                max={new Date(deliveryDeadline).toISOString().split('T')[0]}
+                max={isValidDeliveryDate ? deliveryDate.toISOString().split('T')[0] : undefined}
                 className="w-40"
                 data-testid={`input-dept-deadline-${department.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
               />

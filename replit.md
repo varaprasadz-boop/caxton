@@ -52,10 +52,11 @@ Preferred communication style: Simple, everyday language.
 ### Workflow Management Architecture
 - **Job Lifecycle**: Multi-stage workflow from pending → pre-press → printing → cutting → folding → binding → QC → packaging → dispatch → delivered → completed
 - **Job Numbering**: Sequential job numbers with format CAXNNNN/YYYY-YY (e.g., CAX0001/2025-26) for easy reference and tracking
+- **Job Naming**: Optional alphanumeric job names (e.g., "Marketing Brochure", "Annual Report 2025") displayed next to Job ID in listings
 - **Task Management**: Ordered task system with dependencies and employee assignment
 - **Real-time Updates**: Query invalidation for immediate UI updates after state changes
 - **Deadline Tracking**: Date-based alerts and overdue detection with visual indicators
-- **Progress Visualization**: Timeline components showing workflow status and bottlenecks
+- **Progress Visualization**: Timeline components showing workflow status and bottlenecks with completion percentages
 
 ## External Dependencies
 
