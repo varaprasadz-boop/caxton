@@ -7,6 +7,7 @@ Caxton PHP is a comprehensive workflow management system designed specifically f
 ## Recent Changes
 
 ### October 30, 2025
+- **Client Detail Page Enhancement**: Replaced simple job list with professional status tabs (All Jobs, Pending, In Progress, Completed, Overdue) and comprehensive table view showing Job ID, Job Name, Type, Quantity, Created Date, Deadline, Status, Progress percentage, and View action. Added progress calculation based on task completion, overdue visual indicators (red border/text), and defensive handling for missing deadlines and job numbers. Completed tab includes both "completed" and "delivered" statuses.
 - **Job Detail Page Enhancement**: Added Job ID field display as the first item in the Job Information card with proper formatting (CAX####/YYYY-YY) and defensive handling for missing/invalid job numbers
 - **Default Sorting Implementation**: Jobs page now sorts by Created Date ascending (oldest first), Tasks page sorts by Deadline ascending (earliest first) by default, both maintaining interactive sort toggles
 - **Status Overview Tabs**: Jobs page now includes status filter tabs (All Jobs, Pending, In Progress, Completed, Overdue) with live count updates, matching the Tasks page functionality
