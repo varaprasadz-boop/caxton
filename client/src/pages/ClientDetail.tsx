@@ -153,12 +153,9 @@ export default function ClientDetail() {
                   <StatusBadge status={job.status} />
                 </TableCell>
                 <TableCell className="text-center" data-testid={`text-job-progress-${job.id}`}>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-sm font-medium">{job.progress}%</span>
-                    <Badge variant={job.progress === 100 ? "default" : "secondary"} className="text-xs">
-                      {job.progress === 100 ? "Complete" : `${job.progress}% Complete`}
-                    </Badge>
-                  </div>
+                  <Badge variant={job.progress === 100 ? "default" : "secondary"} className="text-xs">
+                    {job.progress === 100 ? "Complete" : `${job.progress}% Complete`}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
