@@ -4,6 +4,13 @@
 
 Caxton PHP is a comprehensive workflow management system designed specifically for a printing company. The application manages the complete printing workflow from job creation to delivery, including client management, employee coordination, task assignment, and deadline tracking. Built as a modern full-stack web application, it provides real-time visibility into production status and helps coordinate complex multi-stage printing processes.
 
+## Recent Changes
+
+### October 30, 2025
+- **Job Detail Page Enhancement**: Added Job ID field display as the first item in the Job Information card with proper formatting (CAX####/YYYY-YY) and defensive handling for missing/invalid job numbers
+- **Default Sorting Implementation**: Jobs page now sorts by Created Date ascending (oldest first), Tasks page sorts by Deadline ascending (earliest first) by default, both maintaining interactive sort toggles
+- **Status Overview Tabs**: Jobs page now includes status filter tabs (All Jobs, Pending, In Progress, Completed, Overdue) with live count updates, matching the Tasks page functionality
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
