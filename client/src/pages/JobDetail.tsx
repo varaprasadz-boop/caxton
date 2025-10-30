@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Download, Share, FileText, Calendar, Package, User, Palette, Scissors, Cog } from "lucide-react";
+import { ArrowLeft, Edit, Download, Share, FileText, Calendar, Package, User, Palette, Scissors, Cog, Hash } from "lucide-react";
 import JobTimelineVisualization from "@/components/JobTimelineVisualization";
 import JobForm from "@/components/JobForm";
 // import TaskAssignmentModal from "@/components/TaskAssignmentModal"; // TODO: Implement this component
@@ -13,6 +13,18 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type Job, type Client, type Machine } from "@shared/schema";
 import { format } from "date-fns";
+
+function formatJobNumber(jobNumber: number | null | undefined, createdAt: string | Date | null): string {
+  if (jobNumber === null || jobNumber === undefined || !Number.isFinite(jobNumber)) {
+    return 'Job ID Unavailable';
+  }
+  if (!createdAt) return `CAX${String(jobNumber).padStart(4, '0')}`;
+  const date = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
+  const paddedNumber = String(jobNumber).padStart(4, '0');
+  const year = date.getFullYear();
+  const nextYear = String(year + 1).slice(-2);
+  return `CAX${paddedNumber}/${year}-${nextYear}`;
+}
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -166,6 +178,16 @@ export default function JobDetail() {
               <CardDescription>Details about this printing job</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Hash className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Job ID</p>
+                  <p className="text-sm text-muted-foreground font-mono" data-testid="text-job-id-detail">
+                    {formatJobNumber(job.jobNumber, job.createdAt)}
+                  </p>
+                </div>
+              </div>
+
               {job.jobName && (
                 <div className="flex items-start gap-3">
                   <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
