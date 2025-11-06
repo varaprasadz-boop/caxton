@@ -50,7 +50,8 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === "production", // cookies only over https in prod
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // same origin → strict/lax is fine
+      // sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // same origin → strict/lax is fine
+      sameSite: "none",    // 👈 REQUIRED for cross-domain cookies
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
     },
   })
