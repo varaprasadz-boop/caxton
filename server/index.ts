@@ -16,6 +16,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+const isProd = process.env.NODE_ENV === "production";
 
 // ✅ CORS (only needed for local dev, safe in prod since same origin)
 app.use(
@@ -35,24 +36,42 @@ const PORT = process.env.PORT || 3000;
 // ✅ Session configuration (with Postgres store)
 app.set("trust proxy", 1); // 👈 required for secure cookies behind Render proxy
 
+// app.use(
+//   session({
+//     store: new PgSession({
+//       conString: process.env.DATABASE_URL, // Neon Postgres
+//       createTableIfMissing: true,
+//     }),
+//     secret:
+//       process.env.SESSION_SECRET ||
+//       "caxton-php-secret-key-change-in-production",
+//     resave: false,
+//     saveUninitialized: false,
+//     proxy: true,
+//     cookie: {
+//       secure: process.env.NODE_ENV === "production", // cookies only over https in prod
+//       httpOnly: true,
+//       // sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // same origin → strict/lax is fine
+//       sameSite: "none",    // 👈 REQUIRED for cross-domain cookies
+//       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+//     },
+//   })
+// );
+
 app.use(
   session({
     store: new PgSession({
-      conString: process.env.DATABASE_URL, // Neon Postgres
+      conString: process.env.DATABASE_URL,
       createTableIfMissing: true,
     }),
-    secret:
-      process.env.SESSION_SECRET ||
-      "caxton-php-secret-key-change-in-production",
+    secret: process.env.SESSION_SECRET || "dev-secret",
     resave: false,
     saveUninitialized: false,
-    proxy: true,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // cookies only over https in prod
       httpOnly: true,
-      // sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // same origin → strict/lax is fine
-      sameSite: "none",    // 👈 REQUIRED for cross-domain cookies
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      secure: isProd,               // ✅ false on localhost, true in prod
+      sameSite: isProd ? "none" : "lax", // ✅ lax on localhost so cookies work
+      maxAge: 7 * 24 * 60 * 60 * 1000,   // ✅ 7 days
     },
   })
 );
