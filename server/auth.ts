@@ -22,10 +22,18 @@ declare global {
 
 // Middleware to check if user is authenticated
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
+	
+  console.log("🔐 requireAuth check");
+  console.log("Session ID:", req.sessionID);
+  console.log("Session userId:", req.session.userId);
+  console.log("Session keys:", Object.keys(req.session));  
 
   if (!req.session.userId) {
+	console.log("❌ No userId in session - returning 401");
     return res.status(401).json({ error: "User Authentication required 123" });
   }
+  console.log("✅ Auth successful, user:", req.session.userId);
+
   next();
 }
 
