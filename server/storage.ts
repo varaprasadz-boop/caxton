@@ -327,7 +327,20 @@ export class MemStorage implements IStorage {
       finishingOptions: insertJob.finishingOptions || null,
       stageDeadlines: insertJob.stageDeadlines || null,
       poFileUrl: insertJob.poFileUrl || null,
-      machineIds: insertJob.machineIds || null
+      machineIds: insertJob.machineIds || null,
+      // New Job Sheet fields
+      orderDate: insertJob.orderDate || null,
+      scheduleDate: insertJob.scheduleDate || null,
+      jobSpecs: insertJob.jobSpecs || null,
+      cls: insertJob.cls || null,
+      paper: insertJob.paper || null,
+      prePress: insertJob.prePress || null,
+      printing: insertJob.printing || null,
+      additionalProcess: insertJob.additionalProcess || null,
+      cuttingSlip: insertJob.cuttingSlip || null,
+      customerDelivery: insertJob.customerDelivery || null,
+      items: insertJob.items || null,
+      partyPressRemarks: insertJob.partyPressRemarks || null
     };
     this.jobs.set(id, job);
     return job;

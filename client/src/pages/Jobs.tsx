@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Eye, Package, Calendar, Copy, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Search, Eye, Package, Calendar, Copy, ArrowUp, ArrowDown, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Job, Client, Task } from "@shared/schema";
 import { format } from "date-fns";
@@ -129,6 +129,11 @@ export default function Jobs() {
     setLocation(`/jobs/${id}`);
   };
 
+  const handleDownloadJobSheet = (id: string) => {
+    // Open the job sheet preview page in a new tab for printing/downloading
+    window.open(`/jobs/${id}/sheet`, '_blank');
+  };
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
@@ -217,7 +222,7 @@ export default function Jobs() {
                 </Button>
               </TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -286,14 +291,26 @@ export default function Jobs() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleViewJob(job.id)}
-                    data-testid={`button-view-job-${job.id}`}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleViewJob(job.id)}
+                      data-testid={`button-view-job-${job.id}`}
+                      title="View Job"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleDownloadJobSheet(job.id)}
+                      data-testid={`button-download-job-${job.id}`}
+                      title="Download Job Sheet"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
