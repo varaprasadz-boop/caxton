@@ -51,8 +51,8 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     productCategoryId: "",
     jobName: "",
     jobSpecs: "",
-    orderDate: null,
-    scheduleDate: null,
+    orderDate: undefined,
+    scheduleDate: undefined,
     cls: "",
     paper: "",
     prePressSpecs: {},
@@ -332,15 +332,12 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
 
   const selectedClient = clients.find(c => c.id === formData.clientId);
 
-  const SectionHeader = ({ title, section, icon }: { title: string; section: keyof typeof openSections; icon?: any }) => (
+  const SectionHeader = ({ title, section }: { title: string; section: keyof typeof openSections }) => (
     <CollapsibleTrigger 
       className="flex w-full items-center justify-between py-2 text-sm font-medium hover-elevate rounded-md px-2"
       onClick={() => toggleSection(section)}
     >
-      <span className="flex items-center gap-2">
-        {icon && <icon className="h-4 w-4" />}
-        {title}
-      </span>
+      <span>{title}</span>
       <ChevronDown className={`h-4 w-4 transition-transform ${openSections[section] ? 'rotate-180' : ''}`} />
     </CollapsibleTrigger>
   );
