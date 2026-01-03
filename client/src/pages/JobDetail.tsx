@@ -36,20 +36,26 @@ export default function JobDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: job, isLoading } = useQuery<Job>({
+  const { data: job, isLoading, isError } = useQuery<Job | null>({
     queryKey: ["/api/jobs", id],
     queryFn: async () => {
-      const res = await fetch(`/api/jobs/${id}`);
-      if (!res.ok) throw new Error('Failed to fetch job');
+      const res = await fetch(`/api/jobs/${id}`, { credentials: "include" });
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error('Job not found');
+        }
+        throw new Error('Failed to fetch job');
+      }
       return res.json();
     },
-    enabled: !!id
+    enabled: !!id,
+    retry: false
   });
 
   const { data: client } = useQuery<Client>({
     queryKey: ["/api/clients", job?.clientId],
     queryFn: async () => {
-      const res = await fetch(`/api/clients/${job?.clientId}`);
+      const res = await fetch(`/api/clients/${job?.clientId}`, { credentials: "include" });
       if (!res.ok) throw new Error('Failed to fetch client');
       return res.json();
     },
@@ -460,6 +466,43 @@ export default function JobDetail() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Jobs
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading job details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || (!isLoading && !job)) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Job Not Found</h2>
+          <p className="text-muted-foreground mb-4">The requested job could not be found or has been deleted.</p>
+          <Button onClick={handleBack} data-testid="button-back-to-jobs">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Jobs
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading job details...</p>
         </div>
       </div>
     );
