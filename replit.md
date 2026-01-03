@@ -57,6 +57,22 @@ Preferred communication style: Simple, everyday language.
 - **Deadline Tracking**: Date-based alerts and overdue detection with visual indicators
 - **Progress Visualization**: Timeline components showing workflow status and bottlenecks
 
+### Product Categories (Admin-Only)
+- **Purpose**: Categorize jobs by product type (Carton, Box, Labels, etc.)
+- **Access Control**: CRUD operations restricted to admin users via requireAdmin middleware
+- **Management Page**: Dedicated page at /product-categories for admin users
+
+### Enhanced Job Creation Form
+- **Structure**: 11 collapsible sections organizing all job specifications
+- **Sections**: Basic Info, Specifications, Pre-Press, Printing, Additional Process, Cutting Slip, Delivery, Items, Machines, PO File, Stage Allocation
+- **Dynamic Items**: Add/remove rows with automatic amount calculation (Quantity × Rate)
+- **Product Category**: Dropdown selection linked to Product Categories
+
+### Job Detail and Print Card
+- **Collapsible Sections**: Organized display of all job fields matching creation form structure
+- **Print Job Card**: Generates professional HTML job sheet in new window with native print dialog
+- **Loading States**: Proper loading and error handling for async data fetching
+
 ## External Dependencies
 
 ### Database Services
