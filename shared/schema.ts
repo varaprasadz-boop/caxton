@@ -59,7 +59,6 @@ export const machines = pgTable("machines", {
 export const jobs = pgTable("jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobNumber: serial("job_number").notNull(), // Sequential job number for display (e.g., 0001, 0002, etc.)
-  jobName: text("job_name"), // Alphanumeric job name (e.g., "Marketing Brochure", "Annual Report 2025")
   clientId: varchar("client_id").notNull(),
   jobType: text("job_type").notNull(), // Carton, Booklet, Folder, etc.
   description: text("description"),

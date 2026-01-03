@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Calendar, User, Clock, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, Calendar, User, Clock } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Task, Employee, Job, Client, Department } from "@shared/schema";
 import { format } from "date-fns";
@@ -75,17 +75,12 @@ const statusColors = {
   delayed: "destructive"
 } as const;
 
-type SortField = 'deadline' | null;
-type SortDirection = 'asc' | 'desc';
-
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [stageFilter, setStageFilter] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [dateRangeFilter, setDateRangeFilter] = useState("all");
-  const [sortField, setSortField] = useState<SortField>('deadline');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { toast } = useToast();
 
   // Fetch data
@@ -168,23 +163,13 @@ export default function Tasks() {
     return matchesSearch && matchesStatus && matchesStage && matchesEmployee && matchesDateRange;
   });
 
-  // Apply sorting
-  let sortedTasks = [...filteredTasks];
-  if (sortField) {
-    sortedTasks = sortedTasks.sort((a, b) => {
-      const aValue = new Date(a[sortField]).getTime();
-      const bValue = new Date(b[sortField]).getTime();
-      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-    });
-  }
-
   // Separate tasks by status
-  const pendingTasks = sortedTasks.filter(task => task.status === "pending");
-  const inProgressTasks = sortedTasks.filter(task => task.status === "in-progress");
-  const completedTasks = sortedTasks.filter(task => task.status === "completed");
+  const pendingTasks = filteredTasks.filter(task => task.status === "pending");
+  const inProgressTasks = filteredTasks.filter(task => task.status === "in-progress");
+  const completedTasks = filteredTasks.filter(task => task.status === "completed");
 
   // Get overdue tasks
-  const overdueTasks = sortedTasks.filter(task => 
+  const overdueTasks = filteredTasks.filter(task => 
     new Date(task.deadline) < new Date() && task.status !== "completed"
   );
 
@@ -243,17 +228,6 @@ export default function Tasks() {
     updateStatusMutation.mutate({ taskId, status });
   };
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      // Toggle direction if same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // New field, default to ascending
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
   const renderTaskTable = (taskList: typeof enhancedTasks, emptyMessage: string) => (
     <div className="rounded-md border">
       {taskList.length > 0 ? (
@@ -264,22 +238,7 @@ export default function Tasks() {
               <TableHead>Stage</TableHead>
               <TableHead>Job</TableHead>
               <TableHead>Assigned To</TableHead>
-              <TableHead>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 p-0 hover:bg-transparent font-semibold"
-                  onClick={() => handleSort('deadline')}
-                  data-testid="button-sort-deadline"
-                >
-                  Deadline
-                  {sortField === 'deadline' && (
-                    sortDirection === 'asc' ? 
-                      <ArrowUp className="ml-1 h-3 w-3" /> : 
-                      <ArrowDown className="ml-1 h-3 w-3" />
-                  )}
-                </Button>
-              </TableHead>
+              <TableHead>Deadline</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[160px]">Actions</TableHead>
             </TableRow>
@@ -452,7 +411,7 @@ export default function Tasks() {
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="all">
-            All Tasks ({sortedTasks.length})
+            All Tasks ({filteredTasks.length})
           </TabsTrigger>
           <TabsTrigger value="pending">
             Pending ({pendingTasks.length})
@@ -469,7 +428,7 @@ export default function Tasks() {
         </TabsList>
 
         <TabsContent value="all" className="mt-6">
-          {renderTaskTable(sortedTasks, "No tasks found")}
+          {renderTaskTable(filteredTasks, "No tasks found")}
         </TabsContent>
 
         <TabsContent value="pending" className="mt-6">

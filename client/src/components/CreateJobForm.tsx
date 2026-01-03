@@ -30,7 +30,6 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
   const [formData, setFormData] = useState<InsertJob>({
     clientId: "",
     jobType: "",
-    jobName: "",
     description: "",
     quantity: 0,
     size: "",
@@ -310,21 +309,6 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                 <p className="text-sm text-destructive">{errors.jobType}</p>
               )}
             </div>
-          </div>
-
-          {/* Job Name */}
-          <div className="space-y-2">
-            <Label htmlFor="jobName">Job Name</Label>
-            <Input
-              id="jobName"
-              value={formData.jobName || ""}
-              onChange={handleChange("jobName")}
-              placeholder="e.g., Marketing Brochure, Annual Report 2025"
-              data-testid="input-job-name"
-            />
-            {errors.jobName && (
-              <p className="text-sm text-destructive">{errors.jobName}</p>
-            )}
           </div>
 
           {/* Description */}

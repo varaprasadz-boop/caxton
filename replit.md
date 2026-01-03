@@ -4,14 +4,6 @@
 
 Caxton PHP is a comprehensive workflow management system designed specifically for a printing company. The application manages the complete printing workflow from job creation to delivery, including client management, employee coordination, task assignment, and deadline tracking. Built as a modern full-stack web application, it provides real-time visibility into production status and helps coordinate complex multi-stage printing processes.
 
-## Recent Changes
-
-### October 30, 2025
-- **Client Detail Page Enhancement**: Replaced simple job list with professional status tabs (All Jobs, Pending, In Progress, Completed, Overdue) and comprehensive table view showing Job ID, Job Name, Type, Quantity, Created Date, Deadline, Status, Progress percentage, and View action. Added progress calculation based on task completion, overdue visual indicators (red border/text), and defensive handling for missing deadlines and job numbers. Completed tab includes both "completed" and "delivered" statuses.
-- **Job Detail Page Enhancement**: Added Job ID field display as the first item in the Job Information card with proper formatting (CAX####/YYYY-YY) and defensive handling for missing/invalid job numbers
-- **Default Sorting Implementation**: Jobs page now sorts by Created Date ascending (oldest first), Tasks page sorts by Deadline ascending (earliest first) by default, both maintaining interactive sort toggles
-- **Status Overview Tabs**: Jobs page now includes status filter tabs (All Jobs, Pending, In Progress, Completed, Overdue) with live count updates, matching the Tasks page functionality
-
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -60,11 +52,10 @@ Preferred communication style: Simple, everyday language.
 ### Workflow Management Architecture
 - **Job Lifecycle**: Multi-stage workflow from pending → pre-press → printing → cutting → folding → binding → QC → packaging → dispatch → delivered → completed
 - **Job Numbering**: Sequential job numbers with format CAXNNNN/YYYY-YY (e.g., CAX0001/2025-26) for easy reference and tracking
-- **Job Naming**: Optional alphanumeric job names (e.g., "Marketing Brochure", "Annual Report 2025") displayed next to Job ID in listings
 - **Task Management**: Ordered task system with dependencies and employee assignment
 - **Real-time Updates**: Query invalidation for immediate UI updates after state changes
 - **Deadline Tracking**: Date-based alerts and overdue detection with visual indicators
-- **Progress Visualization**: Timeline components showing workflow status and bottlenecks with completion percentages
+- **Progress Visualization**: Timeline components showing workflow status and bottlenecks
 
 ## External Dependencies
 

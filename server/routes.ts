@@ -29,74 +29,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Authentication routes
-  
   app.post("/api/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
-    }
-
-    // Find employee by email
-    const employees = await storage.getEmployees();
-    const employee = employees.find(emp => emp.email.toLowerCase() === email.toLowerCase());
-
-    if (!employee) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    // Check if employee has a password
-    if (!employee.passwordHash) {
-      return res.status(401).json({ error: "No password set for this account. Please contact admin." });
-    }
-
-    // Verify password
-    const passwordMatch = await bcrypt.compare(password, employee.passwordHash);
-    if (!passwordMatch) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    // Create session
-    const userRole = getUserRole(employee);
-    req.session.userId = employee.id;
-    req.session.userEmail = employee.email;
-    req.session.userRole = userRole;
-
-    // Wait for session to save
-    await new Promise<void>((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          reject(err);
-        } else {
-	  console.log("✅ Session saved successfully!");
-      console.log("Session ID:", req.sessionID);
-      console.log("Session data:", req.session);
-          resolve();
-        }
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
+      // Find employee by email
+      const employees = await storage.getEmployees();
+      const employee = employees.find(emp => emp.email.toLowerCase() === email.toLowerCase());
+      
+      if (!employee) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Check if employee has a password
+      if (!employee.passwordHash) {
+        return res.status(401).json({ error: "No password set for this account. Please contact admin." });
+      }
+      
+      // Verify password
+      const passwordMatch = await bcrypt.compare(password, employee.passwordHash);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Create session
+      const userRole = getUserRole(employee);
+      req.session.userId = employee.id;
+      req.session.userEmail = employee.email;
+      req.session.userRole = userRole;
+      
+      res.json({
+        id: employee.id,
+        name: employee.name,
+        email: employee.email,
+        departmentId: employee.departmentId,
+        role: userRole
       });
-    });
-
-    console.log("Login successful:", employee.email);
-
-    // Send response
-    return res.json({
-      id: employee.id,
-      name: employee.name,
-      email: employee.email,
-      departmentId: employee.departmentId,
-      role: userRole
-    });
-
-  } catch (error) {
-    console.error('Login error:', error);
-    if (!res.headersSent) {
-      return res.status(500).json({ error: "Login failed" });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: "Login failed" });
     }
-  }
-});  
-
+  });
+  
   app.post("/api/logout", (req, res) => {
     req.session.destroy((err) => {
       if (err) {
@@ -106,41 +84,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-app.get("/api/me", requireAuth, async (req, res) => {
-  try {
-    console.log("📍 /api/me called");
-    console.log("Session ID:", req.sessionID);
-    console.log("Session data:", req.session);
-    console.log("User ID from session:", req.session.userId);
-    
-    const employee = await storage.getEmployee(req.session.userId!);
-    if (!employee) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Fetch role permissions if user has a roleId
-    let permissions = null;
-    if (employee.roleId) {
-      const role = await storage.getRole(employee.roleId);
-      if (role) {
-        permissions = role.permissions;
+  app.get("/api/me", requireAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployee(req.session.userId!);
+      if (!employee) {
+        return res.status(404).json({ error: "User not found" });
       }
+      
+      // Fetch role permissions if user has a roleId
+      let permissions = null;
+      if (employee.roleId) {
+        const role = await storage.getRole(employee.roleId);
+        if (role) {
+          permissions = role.permissions;
+        }
+      }
+      
+      res.json({
+        id: employee.id,
+        name: employee.name,
+        email: employee.email,
+        departmentId: employee.departmentId,
+        role: req.session.userRole,
+        roleId: employee.roleId,
+        permissions: permissions
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user info" });
     }
-
-    res.json({
-      id: employee.id,
-      name: employee.name,
-      email: employee.email,
-      departmentId: employee.departmentId,
-      role: req.session.userRole,
-      roleId: employee.roleId,
-      permissions: permissions
-    });
-  } catch (error) {
-    console.error("❌ /api/me error:", error);
-    res.status(500).json({ error: "Failed to fetch user info" });
-  }
-});  
+  });
+  
   // File upload route
   app.post("/api/upload", requireAuth, uploadMiddleware, handleFileUploadRoute);
 
@@ -950,13 +923,6 @@ app.get("/api/me", requireAuth, async (req, res) => {
         if (nextTask) {
           // Advance next task from in-queue to pending
           await storage.updateTask(nextTask.id, { status: "pending" });
-        }
-        
-        // Check if all tasks for this job are completed
-        const completedTasks = allJobTasks.filter((t: Task) => t.status === "completed");
-        if (completedTasks.length === allJobTasks.length) {
-          // All tasks completed, mark job as completed
-          await storage.updateJob(task.jobId, { status: "completed" });
         }
       }
       

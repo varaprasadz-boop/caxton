@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Eye, Package, Calendar, Copy, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Search, Eye, Package, Calendar, Copy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Job, Client, Task } from "@shared/schema";
 import { format } from "date-fns";
@@ -25,16 +24,11 @@ function formatJobNumber(jobNumber: number, createdAt: Date | null): string {
   return `CAX${paddedNumber}/${year}-${nextYear}`;
 }
 
-type SortField = 'deadline' | 'createdAt' | null;
-type SortDirection = 'asc' | 'desc';
-
 export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
-  const [sortField, setSortField] = useState<SortField>('createdAt');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [, setLocation] = useLocation();
   const { canCreate } = usePermissions();
   const { toast } = useToast();
@@ -66,7 +60,6 @@ export default function Jobs() {
   // Transform jobs for display
   const transformedJobs = jobs.map(job => {
     const deadline = new Date(job.deadline);
-    const createdAt = job.createdAt ? new Date(job.createdAt) : new Date();
     const isOverdue = deadline < new Date() && !["completed", "delivered"].includes(job.status);
     const formattedJobNumber = formatJobNumber(job.jobNumber, job.createdAt);
     const completionPercentage = calculateCompletion(job.id);
@@ -74,12 +67,10 @@ export default function Jobs() {
     return {
       id: job.id,
       jobNumber: formattedJobNumber,
-      jobName: job.jobName,
       client: clientMap.get(job.clientId)?.name || "Unknown Client",
       jobType: job.jobType,
       quantity: job.quantity,
       deadline: deadline,
-      createdAt: createdAt,
       status: job.status,
       isOverdue,
       completionPercentage
@@ -87,35 +78,15 @@ export default function Jobs() {
   });
 
   // Apply filters
-  let filteredJobs = transformedJobs.filter(job => {
+  const filteredJobs = transformedJobs.filter(job => {
     const matchesSearch = job.jobNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.jobType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (job.jobName && job.jobName.toLowerCase().includes(searchTerm.toLowerCase()));
+                         job.jobType.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || 
                          (statusFilter === "overdue" ? job.isOverdue : job.status === statusFilter);
     const matchesType = typeFilter === "all" || job.jobType === typeFilter;
     return matchesSearch && matchesStatus && matchesType;
   });
-
-  // Apply sorting
-  if (sortField) {
-    filteredJobs = [...filteredJobs].sort((a, b) => {
-      const aValue = a[sortField].getTime();
-      const bValue = b[sortField].getTime();
-      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-    });
-  }
-
-  // Calculate status counts for tabs
-  const pendingJobs = filteredJobs.filter(job => job.status === "pending");
-  const inProgressJobs = filteredJobs.filter(job => 
-    !["pending", "completed", "delivered"].includes(job.status)
-  );
-  const completedJobs = filteredJobs.filter(job => 
-    ["completed", "delivered"].includes(job.status)
-  );
-  const overdueJobs = filteredJobs.filter(job => job.isOverdue);
 
   const handleCreateJob = () => {
     setIsCreateJobModalOpen(true);
@@ -135,172 +106,6 @@ export default function Jobs() {
       title: "Copied!",
       description: `${label} copied to clipboard`,
     });
-  };
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      // Toggle direction if same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // New field, default to ascending
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const renderJobsTable = (jobsList: typeof filteredJobs) => {
-    if (transformedJobs.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">No jobs found</p>
-          <p className="text-sm text-muted-foreground mb-6">
-            Create your first job to get started with the workflow management
-          </p>
-          {canCreate('jobs') && (
-            <Button onClick={handleCreateJob} data-testid="button-create-first-job">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Your First Job
-            </Button>
-          )}
-        </div>
-      );
-    }
-
-    if (jobsList.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">No jobs found in this category</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[140px]">Job ID</TableHead>
-              <TableHead className="w-[180px]">Job Name</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="text-right">Quantity</TableHead>
-              <TableHead>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 p-0 hover:bg-transparent font-semibold"
-                  onClick={() => handleSort('createdAt')}
-                  data-testid="button-sort-created"
-                >
-                  Created
-                  {sortField === 'createdAt' && (
-                    sortDirection === 'asc' ? 
-                      <ArrowUp className="ml-1 h-3 w-3" /> : 
-                      <ArrowDown className="ml-1 h-3 w-3" />
-                  )}
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 p-0 hover:bg-transparent font-semibold"
-                  onClick={() => handleSort('deadline')}
-                  data-testid="button-sort-deadline"
-                >
-                  Deadline
-                  {sortField === 'deadline' && (
-                    sortDirection === 'asc' ? 
-                      <ArrowUp className="ml-1 h-3 w-3" /> : 
-                      <ArrowDown className="ml-1 h-3 w-3" />
-                  )}
-                </Button>
-              </TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {jobsList.map((job) => (
-              <TableRow 
-                key={job.id} 
-                className={job.isOverdue ? "bg-destructive/5" : ""}
-                data-testid={`row-job-${job.id}`}
-              >
-                <TableCell data-testid={`text-job-id-${job.id}`}>
-                  <div className="flex items-center gap-2">
-                    <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
-                      {job.jobNumber}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => copyToClipboard(job.jobNumber, "Job ID")}
-                      data-testid={`button-copy-job-id-${job.id}`}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableCell>
-                <TableCell data-testid={`text-job-name-${job.id}`}>
-                  {job.jobName ? (
-                    <span className="text-sm">{job.jobName}</span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground italic">No name</span>
-                  )}
-                </TableCell>
-                <TableCell data-testid={`text-job-client-${job.id}`}>
-                  {job.client}
-                </TableCell>
-                <TableCell data-testid={`badge-job-type-${job.id}`}>
-                  <Badge variant="outline" className="text-xs">
-                    <Package className="h-3 w-3 mr-1" />
-                    {job.jobType}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right" data-testid={`text-job-quantity-${job.id}`}>
-                  {job.quantity.toLocaleString()}
-                </TableCell>
-                <TableCell data-testid={`text-job-created-${job.id}`}>
-                  <div className="flex items-center gap-1 text-sm">
-                    <Calendar className="h-3 w-3" />
-                    {format(job.createdAt, "MMM dd, yyyy")}
-                  </div>
-                </TableCell>
-                <TableCell data-testid={`text-job-deadline-${job.id}`}>
-                  <div className={`flex items-center gap-1 text-sm ${job.isOverdue ? "text-destructive font-semibold" : ""}`}>
-                    <Calendar className="h-3 w-3" />
-                    {format(job.deadline, "MMM dd, yyyy")}
-                  </div>
-                </TableCell>
-                <TableCell data-testid={`badge-job-status-${job.id}`}>
-                  <div className="flex flex-col gap-1">
-                    <StatusBadge 
-                      status={job.isOverdue ? "overdue" : job.status} 
-                      variant="job" 
-                    />
-                    <div className="text-xs text-muted-foreground" data-testid={`text-job-completion-${job.id}`}>
-                      <span className="font-semibold text-foreground">{job.completionPercentage}%</span> Complete
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleViewJob(job.id)}
-                    data-testid={`button-view-job-${job.id}`}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    );
   };
 
   return (
@@ -373,46 +178,117 @@ export default function Jobs() {
         </div>
       </div>
 
-      {/* Status Overview Tabs */}
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all" data-testid="tab-all-jobs">
-            All Jobs ({filteredJobs.length})
-          </TabsTrigger>
-          <TabsTrigger value="pending" data-testid="tab-pending-jobs">
-            Pending ({pendingJobs.length})
-          </TabsTrigger>
-          <TabsTrigger value="in-progress" data-testid="tab-in-progress-jobs">
-            In Progress ({inProgressJobs.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed" data-testid="tab-completed-jobs">
-            Completed ({completedJobs.length})
-          </TabsTrigger>
-          <TabsTrigger value="overdue" className="text-destructive" data-testid="tab-overdue-jobs">
-            Overdue ({overdueJobs.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="mt-6">
-          {renderJobsTable(filteredJobs)}
-        </TabsContent>
-
-        <TabsContent value="pending" className="mt-6">
-          {renderJobsTable(pendingJobs)}
-        </TabsContent>
-
-        <TabsContent value="in-progress" className="mt-6">
-          {renderJobsTable(inProgressJobs)}
-        </TabsContent>
-
-        <TabsContent value="completed" className="mt-6">
-          {renderJobsTable(completedJobs)}
-        </TabsContent>
-
-        <TabsContent value="overdue" className="mt-6">
-          {renderJobsTable(overdueJobs)}
-        </TabsContent>
-      </Tabs>
+      {/* Jobs Table */}
+      {transformedJobs.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">No jobs found</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            Create your first job to get started with the workflow management
+          </p>
+          {canCreate('jobs') && (
+            <Button onClick={handleCreateJob} data-testid="button-create-first-job">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Your First Job
+            </Button>
+          )}
+        </div>
+      ) : filteredJobs.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">No jobs found matching your filters</p>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setSearchTerm("");
+              setStatusFilter("all");
+              setTypeFilter("all");
+            }}
+            data-testid="button-clear-filters"
+          >
+            Clear Filters
+          </Button>
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[150px]">Job ID</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Quantity</TableHead>
+                <TableHead>Deadline</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-[80px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredJobs.map((job) => (
+                <TableRow 
+                  key={job.id} 
+                  className={job.isOverdue ? "bg-destructive/5" : ""}
+                  data-testid={`row-job-${job.id}`}
+                >
+                  <TableCell data-testid={`text-job-id-${job.id}`}>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
+                        {job.jobNumber}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => copyToClipboard(job.jobNumber, "Job ID")}
+                        data-testid={`button-copy-job-id-${job.id}`}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell data-testid={`text-job-client-${job.id}`}>
+                    {job.client}
+                  </TableCell>
+                  <TableCell data-testid={`badge-job-type-${job.id}`}>
+                    <Badge variant="outline" className="text-xs">
+                      <Package className="h-3 w-3 mr-1" />
+                      {job.jobType}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right" data-testid={`text-job-quantity-${job.id}`}>
+                    {job.quantity.toLocaleString()}
+                  </TableCell>
+                  <TableCell data-testid={`text-job-deadline-${job.id}`}>
+                    <div className={`flex items-center gap-1 text-sm ${job.isOverdue ? "text-destructive font-semibold" : ""}`}>
+                      <Calendar className="h-3 w-3" />
+                      {format(job.deadline, "MMM dd, yyyy")}
+                    </div>
+                  </TableCell>
+                  <TableCell data-testid={`badge-job-status-${job.id}`}>
+                    <div className="flex flex-col gap-1">
+                      <StatusBadge 
+                        status={job.isOverdue ? "overdue" : job.status} 
+                        variant="job" 
+                      />
+                      <div className="text-xs text-muted-foreground" data-testid={`text-job-completion-${job.id}`}>
+                        <span className="font-semibold text-foreground">{job.completionPercentage}%</span> Complete
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleViewJob(job.id)}
+                      data-testid={`button-view-job-${job.id}`}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Create Job Modal */}
       <Modal
