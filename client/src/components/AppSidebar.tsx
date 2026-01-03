@@ -10,7 +10,8 @@ import {
   Building2,
   FileBarChart,
   Cog,
-  Shield
+  Shield,
+  Package
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -75,6 +76,11 @@ const menuItems: MenuItem[] = [
     url: "/machines",
     icon: Cog,
     module: "machines",
+  },
+  {
+    title: "Product Categories",
+    url: "/product-categories",
+    icon: Package,
   },
   {
     title: "Roles",
