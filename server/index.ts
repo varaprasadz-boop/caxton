@@ -34,6 +34,19 @@ app.use(
 
 const PORT = process.env.PORT || 3000;
 
+// Dynamic cookie configuration based on environment
+const cookieConfig: session.CookieOptions = {
+  httpOnly: true,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  sameSite: "lax",
+  secure: isProd, // true in production, false in development
+};
+
+// Only set domain in production for crmcaxton.in
+if (isProd && process.env.COOKIE_DOMAIN) {
+  cookieConfig.domain = process.env.COOKIE_DOMAIN;
+}
+
 app.use(
   session({
     store: new PgSession({
@@ -44,13 +57,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     proxy: true,
-    cookie: {
-      httpOnly: true,
-      secure: true,               // ✅ false on localhost, true in prod
-      sameSite: "lax", // ✅ lax on localhost so cookies work
-      domain: "crmcaxton.in",
-      maxAge: 7 * 24 * 60 * 60 * 1000,   // ✅ 7 days
-    },
+    cookie: cookieConfig,
   })
 );
 
