@@ -13,6 +13,7 @@ import {
   insertRoleSchema,
   insertEmployeeSchema,
   insertMachineSchema,
+  insertProductCategorySchema,
   insertJobSchema, 
   insertTaskSchema,
   insertCompanySettingsSchema,
@@ -574,6 +575,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete machine" });
+    }
+  });
+
+  // Product Categories routes
+  app.get("/api/product-categories", requireAuth, async (req, res) => {
+    try {
+      const categories = await storage.getProductCategories();
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch product categories" });
+    }
+  });
+
+  app.get("/api/product-categories/:id", requireAuth, async (req, res) => {
+    try {
+      const category = await storage.getProductCategory(req.params.id);
+      if (!category) {
+        return res.status(404).json({ error: "Product category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch product category" });
+    }
+  });
+
+  app.post("/api/product-categories", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertProductCategorySchema.parse(req.body);
+      const category = await storage.createProductCategory(validatedData);
+      res.status(201).json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid product category data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create product category" });
+    }
+  });
+
+  app.patch("/api/product-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const updates = insertProductCategorySchema.partial().parse(req.body);
+      const category = await storage.updateProductCategory(req.params.id, updates);
+      if (!category) {
+        return res.status(404).json({ error: "Product category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid product category data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update product category" });
+    }
+  });
+
+  app.delete("/api/product-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const categoryId = req.params.id;
+      
+      // Check if category exists
+      const category = await storage.getProductCategory(categoryId);
+      if (!category) {
+        return res.status(404).json({ error: "Product category not found" });
+      }
+      
+      // Check if category is referenced by any jobs
+      const jobs = await storage.getJobs();
+      const jobsUsingCategory = jobs.filter(job => job.productCategoryId === categoryId);
+      
+      if (jobsUsingCategory.length > 0) {
+        return res.status(400).json({ 
+          error: "Cannot delete product category",
+          message: `This category is being used by ${jobsUsingCategory.length} job(s). Please remove it from those jobs first.`
+        });
+      }
+      
+      await storage.deleteProductCategory(categoryId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete product category" });
     }
   });
 

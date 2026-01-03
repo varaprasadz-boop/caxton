@@ -9,6 +9,8 @@ import {
   type InsertEmployee,
   type Machine,
   type InsertMachine,
+  type ProductCategory,
+  type InsertProductCategory,
   type Job,
   type InsertJob,
   type Task,
@@ -20,6 +22,7 @@ import {
   roles,
   employees,
   machines,
+  productCategories,
   jobs,
   tasks,
   companySettings
@@ -67,6 +70,13 @@ export interface IStorage {
   updateMachine(id: string, updates: Partial<InsertMachine>): Promise<Machine | undefined>;
   deleteMachine(id: string): Promise<boolean>;
   
+  // Product Categories
+  getProductCategory(id: string): Promise<ProductCategory | undefined>;
+  getProductCategories(): Promise<ProductCategory[]>;
+  createProductCategory(category: InsertProductCategory): Promise<ProductCategory>;
+  updateProductCategory(id: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory | undefined>;
+  deleteProductCategory(id: string): Promise<boolean>;
+  
   // Jobs
   getJob(id: string): Promise<Job | undefined>;
   getJobs(): Promise<Job[]>;
@@ -90,6 +100,7 @@ export class MemStorage implements IStorage {
   private departments: Map<string, Department>;
   private employees: Map<string, Employee>;
   private machines: Map<string, Machine>;
+  private productCategoriesMap: Map<string, ProductCategory>;
   private jobs: Map<string, Job>;
   private tasks: Map<string, Task>;
 
@@ -98,6 +109,7 @@ export class MemStorage implements IStorage {
     this.departments = new Map();
     this.employees = new Map();
     this.machines = new Map();
+    this.productCategoriesMap = new Map();
     this.jobs = new Map();
     this.tasks = new Map();
   }
@@ -259,6 +271,45 @@ export class MemStorage implements IStorage {
 
   async deleteMachine(id: string): Promise<boolean> {
     return this.machines.delete(id);
+  }
+
+  // Product Categories
+  async getProductCategory(id: string): Promise<ProductCategory | undefined> {
+    return this.productCategoriesMap.get(id);
+  }
+
+  async getProductCategories(): Promise<ProductCategory[]> {
+    return Array.from(this.productCategoriesMap.values());
+  }
+
+  async createProductCategory(insertCategory: InsertProductCategory): Promise<ProductCategory> {
+    const id = randomUUID();
+    const createdAt = new Date();
+    const category: ProductCategory = {
+      ...insertCategory,
+      id,
+      createdAt,
+      description: insertCategory.description || null
+    };
+    this.productCategoriesMap.set(id, category);
+    return category;
+  }
+
+  async updateProductCategory(id: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory | undefined> {
+    const category = this.productCategoriesMap.get(id);
+    if (!category) return undefined;
+    
+    const updatedCategory: ProductCategory = {
+      ...category,
+      ...updates,
+      description: updates.description !== undefined ? updates.description : category.description
+    };
+    this.productCategoriesMap.set(id, updatedCategory);
+    return updatedCategory;
+  }
+
+  async deleteProductCategory(id: string): Promise<boolean> {
+    return this.productCategoriesMap.delete(id);
   }
 
   // Jobs
@@ -503,6 +554,31 @@ export class PostgreSQLStorage implements IStorage {
 
   async deleteMachine(id: string): Promise<boolean> {
     const result = await db.delete(machines).where(eq(machines.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Product Categories
+  async getProductCategory(id: string): Promise<ProductCategory | undefined> {
+    const result = await db.select().from(productCategories).where(eq(productCategories.id, id));
+    return result[0] || undefined;
+  }
+
+  async getProductCategories(): Promise<ProductCategory[]> {
+    return await db.select().from(productCategories);
+  }
+
+  async createProductCategory(insertCategory: InsertProductCategory): Promise<ProductCategory> {
+    const result = await db.insert(productCategories).values(insertCategory).returning();
+    return result[0];
+  }
+
+  async updateProductCategory(id: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory | undefined> {
+    const result = await db.update(productCategories).set(updates).where(eq(productCategories.id, id)).returning();
+    return result[0] || undefined;
+  }
+
+  async deleteProductCategory(id: string): Promise<boolean> {
+    const result = await db.delete(productCategories).where(eq(productCategories.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 

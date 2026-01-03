@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Plane Sheet Form</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f7f7f7;
+    padding: 20px;
+  }
+  .container {
+    max-width: 1200px;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  h2 {
+    margin-top: 30px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+  }
+  label {
+    font-weight: bold;
+  }
+  input, textarea, select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  textarea {
+    height: 60px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  table, th, td {
+    border: 1px solid #ccc;
+  }
+  th, td {
+    padding: 10px;
+    text-align: left;
+  }
+  .submit-btn {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1 style="text-align:center;">JOB SHEET</h1>
+
+  <div style="display:flex; justify-content:space-between; margin-top:20px;">
+    <div style="width:48%;">
+      <h3>Client Info</h3>
+      <p><strong>Client Name:</strong> <input type="text" style="width:100%;" /></p>
+      <p><strong>Company:</strong> <input type="text" style="width:100%;" /></p>
+      <p><strong>Email:</strong> <input type="email" style="width:100%;" /></p>
+      <p><strong>Phone:</strong> <input type="text" style="width:100%;" /></p>
+    </div>
+
+    <div style="width:48%;">
+      <h3>Job Info</h3>
+      <p><strong>Job Name:</strong> <input type="text" style="width:100%;" /></p>
+      <p><strong>Job ID:</strong> <input type="text" style="width:100%;" /></p>
+      <p><strong>Created Date:</strong> <input type="date" style="width:100%;" /></p>
+      <p><strong>Delivery Deadline:</strong> <input type="date" style="width:100%;" /></p>
+    </div>
+  </div>
+  <hr style="margin:25px 0;" />
+
+  <div class="grid">
+    <div><label>Order Date:</label><input type="date" /></div>
+    <div><label>Machine:</label><input type="text" /></div>
+    <div><label>Job Specs:</label><input type="text" /></div>
+    <div><label>Schedule Date:</label><input type="date" /></div>
+    <div><label>Size:</label><input type="text" /></div>
+    <div><label>Cls:</label><input type="text" /></div>
+    <div><label>Paper:</label><input type="text" /></div>
+    <div><label>Qty:</label><input type="number" /></div>
+  </div>
+
+  <h2>Pre Press Specifications</h2>
+  <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div><label>Special Instructions:</label><textarea></textarea></div>
+    <div><label>File Name:</label><input type="text" /></div>
+    <div><label>Out Put ST:</label><input type="text" /></div>
+    <div><label>Out Put FT:</label><input type="text" /></div>
+
+    <div><label>Paper / GSM:</label><input type="text" /></div>
+    <div><label>Paper Size:</label><input type="text" /></div>
+    <div><label>No. of Sheets Cut:</label><input type="text" /></div>
+    <div><label>Cut Size:</label><input type="text" /></div>
+
+    <div><label>Machine:</label><input type="text" /></div>
+    <div><label>Duration Time ST:</label><input type="text" /></div>
+    <div><label>Duration Time FT:</label><input type="text" /></div>
+  </div>
+
+  <h2>Printing Information</h2>
+  <div class="grid">
+    <div><label>Printing Size:</label><input type="text" /></div>
+    <div><label>Colors:</label><input type="text" /></div>
+    <div><label>Impression:</label><input type="text" /></div>
+    <div><label>Coating:</label><input type="text" /></div>
+    <div><label>Duration Time ST:</label><input type="text" /></div>
+    <div><label>Duration Time FT:</label><input type="text" /></div>
+    <div><label>Wastage:</label><input type="text" /></div>
+  </div>
+    <div><label>Colors:</label><input type="text" /></div>
+    <div><label>Impression:</label><input type="text" /></div>
+    <div><label>Coating:</label><input type="text" /></div>
+    <div><label>Duration Time ST:</label><input type="text" /></div>
+    <div><label>Duration Time FT:</label><input type="text" /></div>
+  </div>
+
+  <h2>Additional Process</h2>
+  <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div><label>Coating:</label><input type="text" /></div>
+    <div><label>Threading:</label><input type="text" /></div>
+    <div><label>Lamination:</label><input type="text" /></div>
+    <div><label>'I' Lets:</label><input type="text" /></div>
+    <div><label>Foiling:</label><input type="text" /></div>
+    <div><label>Folding:</label><input type="text" /></div>
+    <div><label>Spot U.V:</label><input type="text" /></div>
+    <div><label>Section / Centre:</label><input type="text" /></div>
+    <div><label>Punching:</label><input type="text" /></div>
+    <div><label>Perfect Binding:</label><input type="text" /></div>
+    <div><label>Pasting:</label><input type="text" /></div>
+    <div><label>Centre Pinning:</label><input type="text" /></div>
+  </div>
+
+  <h2>Cutting Slip</h2>
+  <div class="grid">
+    <div><label>Job Name:</label><input type="text" /></div>
+    <div><label>Quantity:</label><input type="number" /></div>
+    <div><label>Bill No:</label><input type="text" /></div>
+    <div><label>Cut Size:</label><input type="text" /></div>
+    <div><label>GSM:</label><input type="text" /></div>
+    <div><label>Machine:</label><input type="text" /></div>
+  </div>
+
+  <h2>Customer & Delivery</h2>
+  <div class="grid">
+    <div><label>Customer:</label><input type="text" /></div>
+    <div><label>Wastage:</label><input type="text" /></div>
+    <div><label>Delivery Date:</label><input type="date" /></div>
+    <div><label>Client Details:</label><textarea></textarea></div>
+  </div>
+
+  <h2>Items</h2>
+  <table>
+    <tr>
+      <th>Item</th>
+      <th>Item</th>
+      <th>Remarks</th>
+    </tr>
+    <tr>
+      <td><input type="text" /></td>
+      <td><input type="text" /></td>
+      <td><input type="text" /></td>
+    </tr>
+    <tr>
+      <td>CD / USB / Mail</td>
+      <td>/</td>
+      <td><input type="text" /></td>
+    </tr>
+  </table>
+
+  <h2>Party Press Remarks</h2>
+  <textarea style="width:100%; height:80px;"></textarea>
+
+  <button class="submit-btn">Submit</button>
+
+</div>
+</body>
+</html>

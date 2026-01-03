@@ -55,12 +55,22 @@ export const machines = pgTable("machines", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Product Categories table
+export const productCategories = pgTable("product_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Jobs table
 export const jobs = pgTable("jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobNumber: serial("job_number").notNull(), // Sequential job number for display (e.g., 0001, 0002, etc.)
   clientId: varchar("client_id").notNull(),
+  productCategoryId: varchar("product_category_id"), // Reference to product categories
   jobType: text("job_type").notNull(), // Carton, Booklet, Folder, etc.
+  jobName: text("job_name"), // Custom job name
   description: text("description"),
   quantity: integer("quantity").notNull(),
   size: text("size"),
@@ -72,6 +82,26 @@ export const jobs = pgTable("jobs", {
   machineIds: text("machine_ids").array(), // Array of machine IDs selected for this job
   status: text("status").notNull().default("pending"), // pending, pre-press, printing, cutting, folding, binding, qc, packaging, dispatch, delivered, completed
   createdAt: timestamp("created_at").default(sql`now()`),
+  // Job info fields
+  jobSpecs: text("job_specs"),
+  orderDate: timestamp("order_date"),
+  scheduleDate: timestamp("schedule_date"),
+  cls: text("cls"),
+  paper: text("paper"),
+  // Pre-press specifications (JSON object)
+  prePressSpecs: json("pre_press_specs"), // { specialInstructions, fileName, outputST, outputFT, paperGsm, paperSize, sheetsCount, cutSize, machine, durationST, durationFT }
+  // Printing information (JSON object)
+  printingInfo: json("printing_info"), // { printingSize, colors, impression, coating, durationST, durationFT, wastage }
+  // Additional process options (JSON object)
+  additionalProcess: json("additional_process"), // { coating, threading, lamination, iLets, foiling, folding, spotUv, sectionCentre, punching, perfectBinding, pasting, centrePinning }
+  // Cutting slip (JSON object)
+  cuttingSlip: json("cutting_slip"), // { jobName, quantity, billNo, cutSize, gsm, machine }
+  // Customer & delivery (JSON object)
+  customerDelivery: json("customer_delivery"), // { customer, wastage, deliveryDate, clientDetails }
+  // Dynamic items array
+  items: json("items"), // Array of { item1, item2, remarks }
+  // Party press remarks
+  partyPressRemarks: text("party_press_remarks"),
 });
 
 // Tasks table
@@ -138,11 +168,89 @@ export const insertRoleSchema = createInsertSchema(roles).omit({ id: true, creat
 });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
 export const insertMachineSchema = createInsertSchema(machines).omit({ id: true, createdAt: true });
+export const insertProductCategorySchema = createInsertSchema(productCategories).omit({ id: true, createdAt: true });
+
+// JSON field schemas for job extended data
+export const prePressSpecsSchema = z.object({
+  specialInstructions: z.string().optional(),
+  fileName: z.string().optional(),
+  outputST: z.string().optional(),
+  outputFT: z.string().optional(),
+  paperGsm: z.string().optional(),
+  paperSize: z.string().optional(),
+  sheetsCount: z.string().optional(),
+  cutSize: z.string().optional(),
+  machine: z.string().optional(),
+  durationST: z.string().optional(),
+  durationFT: z.string().optional(),
+}).optional();
+
+export const printingInfoSchema = z.object({
+  printingSize: z.string().optional(),
+  colors: z.string().optional(),
+  impression: z.string().optional(),
+  coating: z.string().optional(),
+  durationST: z.string().optional(),
+  durationFT: z.string().optional(),
+  wastage: z.string().optional(),
+}).optional();
+
+export const additionalProcessSchema = z.object({
+  coating: z.string().optional(),
+  threading: z.string().optional(),
+  lamination: z.string().optional(),
+  iLets: z.string().optional(),
+  foiling: z.string().optional(),
+  folding: z.string().optional(),
+  spotUv: z.string().optional(),
+  sectionCentre: z.string().optional(),
+  punching: z.string().optional(),
+  perfectBinding: z.string().optional(),
+  pasting: z.string().optional(),
+  centrePinning: z.string().optional(),
+}).optional();
+
+export const cuttingSlipSchema = z.object({
+  jobName: z.string().optional(),
+  quantity: z.string().optional(),
+  billNo: z.string().optional(),
+  cutSize: z.string().optional(),
+  gsm: z.string().optional(),
+  machine: z.string().optional(),
+}).optional();
+
+export const customerDeliverySchema = z.object({
+  customer: z.string().optional(),
+  wastage: z.string().optional(),
+  deliveryDate: z.string().optional(),
+  clientDetails: z.string().optional(),
+}).optional();
+
+export const jobItemSchema = z.object({
+  item1: z.string().optional(),
+  item2: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, jobNumber: true, createdAt: true }).extend({
   status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional(),
   stageDeadlines: stageDeadlinesSchema.optional(),
-  poFileUrl: z.string().min(1).optional(), // Allow relative URLs for local file storage
-  machineIds: z.array(z.string()).optional() // Array of machine IDs
+  poFileUrl: z.string().min(1).optional(),
+  machineIds: z.array(z.string()).optional(),
+  productCategoryId: z.string().optional(),
+  jobName: z.string().optional(),
+  jobSpecs: z.string().optional(),
+  orderDate: z.coerce.date().optional(),
+  scheduleDate: z.coerce.date().optional(),
+  cls: z.string().optional(),
+  paper: z.string().optional(),
+  prePressSpecs: prePressSpecsSchema,
+  printingInfo: printingInfoSchema,
+  additionalProcess: additionalProcessSchema,
+  cuttingSlip: cuttingSlipSchema,
+  customerDelivery: customerDeliverySchema,
+  items: z.array(jobItemSchema).optional(),
+  partyPressRemarks: z.string().optional(),
 });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, taskSequence: true, createdAt: true, updatedAt: true }).extend({
   status: z.enum(["pending", "in-queue", "in-progress", "completed", "delayed"]).optional(),
@@ -161,8 +269,16 @@ export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
 export type InsertMachine = z.infer<typeof insertMachineSchema>;
 export type Machine = typeof machines.$inferSelect;
+export type InsertProductCategory = z.infer<typeof insertProductCategorySchema>;
+export type ProductCategory = typeof productCategories.$inferSelect;
 export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
+export type PrePressSpecs = z.infer<typeof prePressSpecsSchema>;
+export type PrintingInfo = z.infer<typeof printingInfoSchema>;
+export type AdditionalProcess = z.infer<typeof additionalProcessSchema>;
+export type CuttingSlip = z.infer<typeof cuttingSlipSchema>;
+export type CustomerDelivery = z.infer<typeof customerDeliverySchema>;
+export type JobItem = z.infer<typeof jobItemSchema>;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
 export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
