@@ -7,7 +7,7 @@ import { Mail, Phone, Briefcase, Eye, Edit } from "lucide-react";
 interface EmployeeCardProps {
   id: string;
   name: string;
-  department: string;
+  role: string;
   email: string;
   phone?: string;
   activeTasks?: number;
@@ -19,7 +19,7 @@ interface EmployeeCardProps {
 export default function EmployeeCard({
   id,
   name,
-  department,
+  role,
   email,
   phone,
   activeTasks = 0,
@@ -41,19 +41,16 @@ export default function EmployeeCard({
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const getDepartmentBadgeColor = (department: string) => {
-    const colors: Record<string, string> = {
-      'Pre-Press': 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400',
-      'Printing': 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
-      'Cutting': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-400',
-      'Folding': 'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-400',
-      'Binding': 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
+  const getRoleBadgeColor = (role: string) => {
+    const colors = {
+      'Designer': 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400',
+      'Printer': 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
+      'Binder': 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
       'QC': 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400',
       'Packaging': 'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-400',
-      'Dispatch': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400',
-      'Unassigned': 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400',
+      'Logistics': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400',
     };
-    return colors[department] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
+    return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
   };
 
   return (
@@ -69,8 +66,8 @@ export default function EmployeeCard({
             <div>
               <CardTitle className="text-lg">{name}</CardTitle>
               <CardDescription>
-                <Badge className={`text-xs ${getDepartmentBadgeColor(department)}`}>
-                  {department}
+                <Badge className={`text-xs ${getRoleBadgeColor(role)}`}>
+                  {role}
                 </Badge>
               </CardDescription>
             </div>

@@ -1,93 +1,105 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
-import CreateEmployeeForm from "@/components/CreateEmployeeForm";
-import EditEmployeeForm from "@/components/EditEmployeeForm";
-import Modal from "@/components/Modal";
+import EmployeeCard from "@/components/EmployeeCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Pencil } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import type { Employee, Department, Task } from "@shared/schema";
-import { usePermissions } from "@/hooks/use-permissions";
+import { Plus, Search } from "lucide-react";
 
 export default function Employees() {
-  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [isCreateEmployeeModalOpen, setIsCreateEmployeeModalOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const { canCreate, canEdit, canView } = usePermissions();
+  const [roleFilter, setRoleFilter] = useState("all");
 
-  const { data: employees = [] } = useQuery<Employee[]>({
-    queryKey: ["/api/employees"]
-  });
-
-  const { data: departments = [] } = useQuery<Department[]>({
-    queryKey: ["/api/departments"]
-  });
-
-  const { data: tasks = [] } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"]
-  });
-
-  const employeesWithStats = employees.map(employee => {
-    const employeeTasks = tasks.filter((task: any) => task.employeeId === employee.id);
-    const activeTasks = employeeTasks.filter((task: any) => task.status !== "completed").length;
-    const completedTasks = employeeTasks.filter((task: any) => task.status === "completed").length;
-    
-    return {
-      ...employee,
-      activeTasks,
-      completedTasks
-    };
-  });
+  // TODO: Remove mock data when implementing real functionality
+  const mockEmployees = [
+    {
+      id: "1", 
+      name: "Sarah Design",
+      role: "Designer",
+      email: "sarah@caxton.com",
+      phone: "+1 555-0111",
+      activeTasks: 2,
+      completedTasks: 15
+    },
+    {
+      id: "2",
+      name: "Mike Printer",
+      role: "Printer", 
+      email: "mike@caxton.com",
+      phone: "+1 555-0222",
+      activeTasks: 4,
+      completedTasks: 28
+    },
+    {
+      id: "3",
+      name: "Anna QC",
+      role: "QC",
+      email: "anna@caxton.com",
+      phone: "+1 555-0333",
+      activeTasks: 1,
+      completedTasks: 22
+    },
+    {
+      id: "4",
+      name: "David Bind",
+      role: "Binder",
+      email: "david@caxton.com",
+      phone: "+1 555-0444", 
+      activeTasks: 3,
+      completedTasks: 18
+    },
+    {
+      id: "5",
+      name: "Lisa Pack",
+      role: "Packaging",
+      email: "lisa@caxton.com",
+      phone: "+1 555-0555",
+      activeTasks: 2,
+      completedTasks: 25
+    },
+    {
+      id: "6", 
+      name: "Tom Deliver",
+      role: "Logistics",
+      email: "tom@caxton.com",
+      phone: "+1 555-0666",
+      activeTasks: 1,
+      completedTasks: 31
+    }
+  ];
 
   const handleCreateEmployee = () => {
-    setIsCreateEmployeeModalOpen(true);
-  };
-
-  const handleCreateEmployeeSuccess = () => {
-    setIsCreateEmployeeModalOpen(false);
+    console.log('Creating new employee');
   };
 
   const handleViewEmployee = (id: string) => {
-    setLocation(`/employees/${id}`);
+    console.log('Viewing employee:', id);
   };
 
   const handleEditEmployee = (id: string) => {
-    const employee = employees.find(emp => emp.id === id);
-    if (employee) {
-      setEditingEmployee(employee);
-    }
+    console.log('Editing employee:', id);
   };
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
+    console.log('Searching employees:', value);
   };
 
-  const handleDepartmentFilter = (value: string) => {
-    setDepartmentFilter(value);
+  const handleRoleFilter = (value: string) => {
+    setRoleFilter(value);
+    console.log('Filtering by role:', value);
   };
 
-  const departmentMap = departments.reduce((acc, dept) => {
-    acc[dept.id] = dept.name;
-    return acc;
-  }, {} as Record<string, string>);
-
-  const filteredEmployees = employeesWithStats.filter(employee => {
-    const departmentName = employee.departmentId ? departmentMap[employee.departmentId] : "Unassigned";
+  const filteredEmployees = mockEmployees.filter(employee => {
     const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (departmentName && departmentName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         employee.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          employee.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = departmentFilter === "all" || employee.departmentId === departmentFilter || (departmentFilter === "unassigned" && !employee.departmentId);
-    return matchesSearch && matchesDepartment;
+    const matchesRole = roleFilter === "all" || employee.role === roleFilter;
+    return matchesSearch && matchesRole;
   });
 
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-employees">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
@@ -95,14 +107,13 @@ export default function Employees() {
             Manage your team members and their assignments
           </p>
         </div>
-        {canCreate('employees') && (
-          <Button onClick={handleCreateEmployee} data-testid="button-create-employee">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Employee
-          </Button>
-        )}
+        <Button onClick={handleCreateEmployee} data-testid="button-create-employee">
+          <Plus className="mr-2 h-4 w-4" />
+          Add Employee
+        </Button>
       </div>
 
+      {/* Filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -115,145 +126,59 @@ export default function Employees() {
           />
         </div>
         
-        <Select value={departmentFilter} onValueChange={handleDepartmentFilter}>
-          <SelectTrigger className="w-48" data-testid="select-department-filter">
-            <SelectValue placeholder="Filter by department" />
+        <Select value={roleFilter} onValueChange={handleRoleFilter}>
+          <SelectTrigger className="w-48" data-testid="select-role-filter">
+            <SelectValue placeholder="Filter by role" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-            {departments.map((dept) => (
-              <SelectItem key={dept.id} value={dept.id}>
-                {dept.name}
-              </SelectItem>
-            ))}
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="Designer">Designer</SelectItem>
+            <SelectItem value="Printer">Printer</SelectItem>
+            <SelectItem value="Binder">Binder</SelectItem>
+            <SelectItem value="QC">QC</SelectItem>
+            <SelectItem value="Packaging">Packaging</SelectItem>
+            <SelectItem value="Logistics">Logistics</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <div className="rounded-md border">
-        {filteredEmployees.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead className="w-[120px]">Active Tasks</TableHead>
-                <TableHead className="w-[120px]">Completed</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEmployees.map(employee => (
-                <TableRow key={employee.id} data-testid={`row-employee-${employee.id}`}>
-                  <TableCell data-testid={`text-employee-name-${employee.id}`}>
-                    <span className="font-medium">{employee.name}</span>
-                  </TableCell>
-                  <TableCell data-testid={`text-employee-email-${employee.id}`}>
-                    <span className="text-sm text-muted-foreground">{employee.email}</span>
-                  </TableCell>
-                  <TableCell data-testid={`text-employee-phone-${employee.id}`}>
-                    <span className="text-sm text-muted-foreground">
-                      {employee.phone || "—"}
-                    </span>
-                  </TableCell>
-                  <TableCell data-testid={`text-employee-department-${employee.id}`}>
-                    <Badge variant="secondary">
-                      {employee.departmentId ? departmentMap[employee.departmentId] : "Unassigned"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell data-testid={`text-employee-active-tasks-${employee.id}`}>
-                    <div className="flex items-center justify-center">
-                      <Badge variant="default">{employee.activeTasks}</Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell data-testid={`text-employee-completed-tasks-${employee.id}`}>
-                    <div className="flex items-center justify-center">
-                      <Badge variant="outline">{employee.completedTasks}</Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {canView('employees') && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleViewEmployee(employee.id)}
-                          data-testid={`button-view-employee-${employee.id}`}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {canEdit('employees') && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleEditEmployee(employee.id)}
-                          data-testid={`button-edit-employee-${employee.id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">
-              No employees found matching your criteria
-            </p>
-            <div className="flex gap-2 justify-center">
-              <Button variant="outline" onClick={() => setSearchTerm("")}>
-                Clear Search
-              </Button>
-              <Button variant="outline" onClick={() => setDepartmentFilter("all")}>
-                Clear Filters
-              </Button>
-            </div>
-          </div>
-        )}
+      {/* Employees Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {filteredEmployees.map(employee => (
+          <EmployeeCard
+            key={employee.id}
+            {...employee}
+            onView={handleViewEmployee}
+            onEdit={handleEditEmployee}
+          />
+        ))}
       </div>
 
-      {employees.length === 0 && (
+      {/* Empty State */}
+      {filteredEmployees.length === 0 && (searchTerm || roleFilter !== "all") && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">No employees yet</p>
-          {canCreate('employees') && (
-            <Button onClick={handleCreateEmployee} data-testid="button-create-first-employee">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Your First Employee
+          <p className="text-muted-foreground mb-4">
+            No employees found matching your criteria
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" onClick={() => setSearchTerm("")}>
+              Clear Search
             </Button>
-          )}
+            <Button variant="outline" onClick={() => setRoleFilter("all")}>
+              Clear Filters
+            </Button>
+          </div>
         </div>
       )}
 
-      <Modal
-        isOpen={isCreateEmployeeModalOpen}
-        onClose={() => setIsCreateEmployeeModalOpen(false)}
-        title="Add New Employee"
-      >
-        <CreateEmployeeForm 
-          onSuccess={handleCreateEmployeeSuccess}
-          onCancel={() => setIsCreateEmployeeModalOpen(false)}
-        />
-      </Modal>
-
-      {editingEmployee && (
-        <Modal
-          isOpen={!!editingEmployee}
-          onClose={() => setEditingEmployee(null)}
-          title="Edit Employee"
-        >
-          <EditEmployeeForm 
-            employee={editingEmployee}
-            onSuccess={() => setEditingEmployee(null)}
-            onCancel={() => setEditingEmployee(null)}
-          />
-        </Modal>
+      {mockEmployees.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">No employees yet</p>
+          <Button onClick={handleCreateEmployee} data-testid="button-create-first-employee">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Your First Employee
+          </Button>
+        </div>
       )}
     </div>
   );

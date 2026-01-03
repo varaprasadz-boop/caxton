@@ -6,7 +6,7 @@ export default function EmployeeCardExample() {
     {
       id: "1",
       name: "Sarah Design",
-      department: "Pre-Press",
+      role: "Designer",
       email: "sarah@caxton.com",
       phone: "+1 555-0111",
       activeTasks: 2,
@@ -15,7 +15,7 @@ export default function EmployeeCardExample() {
     {
       id: "2",
       name: "Mike Printer",
-      department: "Printing",
+      role: "Printer",
       email: "mike@caxton.com",
       phone: "+1 555-0222",
       activeTasks: 4,
@@ -24,7 +24,7 @@ export default function EmployeeCardExample() {
     {
       id: "3",
       name: "Anna QC",
-      department: "QC",
+      role: "QC",
       email: "anna@caxton.com",
       activeTasks: 1,
       completedTasks: 22

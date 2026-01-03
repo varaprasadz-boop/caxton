@@ -6,14 +6,9 @@ import {
   BarChart3,
   Settings,
   UserCheck,
-  FileText,
-  Building2,
-  FileBarChart,
-  Cog,
-  Shield
+  FileText
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
 import {
   Sidebar,
   SidebarContent,
@@ -25,16 +20,8 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import type { Employee, Permissions, PermissionModule, CompanySettings } from "@/../../shared/schema";
 
-interface MenuItem {
-  title: string;
-  url: string;
-  icon: any;
-  module?: PermissionModule;
-}
-
-const menuItems: MenuItem[] = [
+const menuItems = [
   {
     title: "Dashboard",
     url: "/",
@@ -44,114 +31,38 @@ const menuItems: MenuItem[] = [
     title: "Jobs",
     url: "/jobs",
     icon: Briefcase,
-    module: "jobs",
   },
   {
     title: "Tasks",
     url: "/tasks",
     icon: CheckSquare,
-    module: "tasks",
   },
   {
     title: "Clients",
     url: "/clients",
     icon: Users,
-    module: "clients",
-  },
-  {
-    title: "Departments",
-    url: "/departments",
-    icon: Building2,
-    module: "departments",
   },
   {
     title: "Employees",
     url: "/employees",
     icon: UserCheck,
-    module: "employees",
-  },
-  {
-    title: "Machines",
-    url: "/machines",
-    icon: Cog,
-    module: "machines",
-  },
-  {
-    title: "Roles",
-    url: "/roles",
-    icon: Shield,
-    module: "roles",
-  },
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: FileBarChart,
-  },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
   },
 ];
 
-interface CurrentUser extends Employee {
-  permissions?: Permissions;
-}
-
 export default function AppSidebar() {
   const [location] = useLocation();
-  
-  const { data: currentUser } = useQuery<CurrentUser>({
-    queryKey: ["/api/me"],
-  });
-
-  const { data: companySettings } = useQuery<CompanySettings>({
-    queryKey: ["/api/company-settings"],
-  });
-
-  // Filter menu items based on user permissions
-  const visibleMenuItems = menuItems.filter(item => {
-    // Always show Dashboard
-    if (item.url === "/") {
-      return true;
-    }
-
-    // Always show Reports and Settings to all authenticated users
-    if (item.url === "/reports" || item.url === "/settings") {
-      return true;
-    }
-
-    // Admins can see everything
-    if (currentUser?.role === 'admin') {
-      return true;
-    }
-
-    // For items with module permissions, check if user has view permission
-    if (item.module && currentUser?.permissions) {
-      const modulePermissions = currentUser.permissions[item.module];
-      return modulePermissions?.view === true;
-    }
-
-    // Hide items without module mapping for non-admins (safety default)
-    return false;
-  });
 
   return (
     <Sidebar data-testid="sidebar-main">
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center justify-center rounded-md p-3">
-          {companySettings?.logoUrl ? (
-            <img 
-              src={companySettings.logoUrl} 
-              alt={companySettings.companyName || "Company Logo"} 
-              className="h-12 w-auto max-w-full object-contain"
-              data-testid="img-company-logo"
-            />
-          ) : (
-            <h1 className="text-xl font-bold text-sidebar-foreground" data-testid="text-company-name">
-              {companySettings?.companyName || "Caxton PHP"}
-            </h1>
-          )}
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
+            <FileText className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-sidebar-foreground">Caxton PHP</h2>
+            <p className="text-xs text-sidebar-foreground/70">Print Workflow</p>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -159,7 +70,7 @@ export default function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleMenuItems.map((item) => (
+              {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 

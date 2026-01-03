@@ -1,67 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
-import session from "express-session";
 import { registerRoutes } from "./routes";
-import { setupVite, log } from "./vite";
-import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
-import pgSession from "connect-pg-simple";
-
-const PgSession = pgSession(session);
-
-// Polyfill for __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.set("trust proxy", 1);
-const isProd = process.env.NODE_ENV === "production";
 
-// ✅ CORS (only needed for local dev, safe in prod since same origin)
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:5173",
-      "https://crmcaxton.in",
-      "https://caxton-services.onrender.com", // same origin in prod
-    ],
-    credentials: true,
-  })
-);
-
-const PORT = process.env.PORT || 3000;
-
-// Dynamic cookie configuration based on environment
-const cookieConfig: session.CookieOptions = {
-  httpOnly: true,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  sameSite: "lax",
-  secure: isProd, // true in production, false in development
-};
-
-// Only set domain in production for crmcaxton.in
-if (isProd && process.env.COOKIE_DOMAIN) {
-  cookieConfig.domain = process.env.COOKIE_DOMAIN;
-}
-
-app.use(
-  session({
-    store: new PgSession({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
-    }),
-    secret: process.env.SESSION_SECRET || "dev-secret",
-    resave: false,
-    saveUninitialized: false,
-    proxy: true,
-    cookie: cookieConfig,
-  })
-);
-
-// ✅ API request logger
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -103,29 +47,25 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    // Dev mode -> Vite
     await setupVite(app, server);
   } else {
-    // Production -> Serve React build
-    const clientPath = path.join(__dirname, "../dist/public");
-    app.use(express.static(clientPath));
-
-    // React catch-all (for client-side routing)
-    app.get("*", (_, res) => {
-      res.sendFile(path.join(clientPath, "index.html"));
-    });
+    serveStatic(app);
   }
 
-  const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    }
-  );
+  // ALWAYS serve the app on the port specified in the environment variable PORT
+  // Other ports are firewalled. Default to 5000 if not specified.
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
+  const port = parseInt(process.env.PORT || '5000', 10);
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+  });
 })();
