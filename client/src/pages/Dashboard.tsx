@@ -1,64 +1,80 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
 import DashboardStats from "@/components/DashboardStats";
+import DetailedStats from "@/components/DetailedStats";
 import DeadlineAlerts from "@/components/DeadlineAlerts";
+import ActivityFeed from "@/components/ActivityFeed";
 import JobCard from "@/components/JobCard";
+import CreateJobForm from "@/components/CreateJobForm";
+import Modal from "@/components/Modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Activity } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Activity, BarChart3 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { usePermissions } from "@/hooks/use-permissions";
+import type { Job, Client } from "@shared/schema";
 
 export default function Dashboard() {
-  // TODO: Remove mock data when implementing real functionality
-  const mockRecentJobs = [
-    {
-      id: "1",
-      title: "Business Card Print Run",
-      client: "TechCorp Solutions", 
-      jobType: "Business Cards",
-      quantity: 1000,
-      deadline: new Date("2024-01-15"),
-      status: "printing",
-      description: "Premium business cards with matte finish"
-    },
-    {
-      id: "2",
-      title: "Marketing Brochure",
-      client: "Green Earth Co",
-      jobType: "Brochures", 
-      quantity: 500,
-      deadline: new Date("2024-01-12"),
-      status: "qc"
-    }
-  ];
+  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
+  const [, setLocation] = useLocation();
+  const { canCreate } = usePermissions();
 
-  const mockDeadlineItems = [
-    {
-      id: "1",
-      title: "Business Card QC",
-      type: "task" as const,
-      client: "TechCorp Solutions",
-      deadline: new Date(),
-      status: "pending",
-      stage: "QC"
-    },
-    {
-      id: "2", 
-      title: "Urgent Flyers",
-      type: "job" as const,
-      client: "Event Co",
-      deadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      status: "printing"
-    }
-  ];
+  // Fetch real data
+  const { data: jobs = [] } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"]
+  });
+
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"]
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["/api/stats/jobs"]
+  });
+
+  const { data: alerts = [] } = useQuery({
+    queryKey: ["/api/alerts/deadlines"]
+  });
+
+  // Create client lookup map
+  const clientMap = new Map(clients.map(c => [c.id, c]));
+
+  // Get recent jobs (last 5)
+  const recentJobs = jobs
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 5)
+    .map(job => ({
+      id: job.id,
+      title: job.description || job.jobType,
+      client: clientMap.get(job.clientId)?.name || "Unknown Client",
+      jobType: job.jobType,
+      quantity: job.quantity,
+      deadline: new Date(job.deadline),
+      status: job.status,
+      description: job.description
+    }));
 
   const handleCreateJob = () => {
-    console.log('Creating new job');
+    setIsCreateJobModalOpen(true);
+  };
+
+  const handleCreateJobSuccess = () => {
+    setIsCreateJobModalOpen(false);
   };
 
   const handleViewJob = (id: string) => {
     console.log('Viewing job:', id);
+    setLocation(`/jobs/${id}`);
   };
 
   const handleViewDeadlineItem = (id: string, type: "job" | "task") => {
     console.log('Viewing deadline item:', type, id);
+    if (type === 'job') {
+      setLocation(`/jobs/${id}`);
+    } else {
+      setLocation(`/tasks/${id}`);
+    }
   };
 
   return (
@@ -68,53 +84,107 @@ export default function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Overview of your printing workflow operations
+            Real-time overview of your printing workflow operations
           </p>
         </div>
-        <Button onClick={handleCreateJob} data-testid="button-create-job">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Job
-        </Button>
+        {canCreate('jobs') && (
+          <Button onClick={handleCreateJob} data-testid="button-create-job">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Job
+          </Button>
+        )}
       </div>
 
-      {/* Stats */}
-      <DashboardStats 
-        totalJobs={45}
-        activeJobs={12}
-        completedJobs={28}
-        overdueJobs={5}
-      />
+      {/* Dashboard Tabs */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="activity">Activity Feed</TabsTrigger>
+        </TabsList>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Recent Jobs */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Recent Jobs
-            </CardTitle>
-            <CardDescription>
-              Latest job activities and updates
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {mockRecentJobs.map(job => (
-              <JobCard 
-                key={job.id}
-                {...job}
-                onView={handleViewJob}
-              />
-            ))}
-          </CardContent>
-        </Card>
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Quick Stats */}
+          <DashboardStats 
+            totalJobs={stats?.totalJobs || 0}
+            activeJobs={stats?.activeJobs || 0}
+            completedJobs={stats?.completedJobs || 0}
+            overdueJobs={stats?.overdueJobs || 0}
+          />
 
-        {/* Deadline Alerts */}
-        <DeadlineAlerts 
-          items={mockDeadlineItems}
-          onView={handleViewDeadlineItem}
+          {/* Main Content Grid */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Recent Jobs */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Recent Jobs
+                </CardTitle>
+                <CardDescription>
+                  Latest job activities and updates
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {recentJobs.length > 0 ? (
+                  recentJobs.map(job => (
+                    <JobCard 
+                      key={job.id}
+                      {...job}
+                      onView={handleViewJob}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">No jobs yet</p>
+                    {canCreate('jobs') && (
+                      <Button onClick={handleCreateJob} variant="outline">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Your First Job
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Deadline Alerts */}
+            <DeadlineAlerts 
+              items={alerts}
+              onView={handleViewDeadlineItem}
+            />
+          </div>
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-6">
+          <DetailedStats />
+        </TabsContent>
+
+        {/* Activity Feed Tab */}
+        <TabsContent value="activity" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <ActivityFeed limit={20} />
+            <DeadlineAlerts 
+              items={alerts}
+              onView={handleViewDeadlineItem}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Create Job Modal */}
+      <Modal
+        isOpen={isCreateJobModalOpen}
+        onClose={() => setIsCreateJobModalOpen(false)}
+        title="Create New Job"
+      >
+        <CreateJobForm 
+          onSuccess={handleCreateJobSuccess}
+          onCancel={() => setIsCreateJobModalOpen(false)}
         />
-      </div>
+      </Modal>
     </div>
   );
 }
