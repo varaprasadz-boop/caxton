@@ -15,7 +15,7 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "types": ["node", "vite/client"],
-    "rootDir": "server",
+    "rootDir": ".",
     "outDir": "dist",
     "paths": {
       "@/*": ["./client/src/*"],

@@ -8,8 +8,35 @@ import { format } from "date-fns";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+interface ClientStat {
+  clientId: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  paymentMethod: string;
+  totalJobs: number;
+  activeJobs: number;
+  completedJobs: number;
+  overdueJobs: number;
+  totalQuantity: number;
+  jobTypeBreakdown: Record<string, number>;
+  lastJobDate: string | null;
+}
+
+interface ClientReportData {
+  clients: ClientStat[];
+  topClients: ClientStat[];
+  summary: {
+    totalClients: number;
+    activeClients: number;
+    totalJobsAllClients: number;
+    avgJobsPerClient: number;
+  };
+}
+
 export default function ClientReport() {
-  const { data: reportData, isLoading } = useQuery({
+  const { data: reportData, isLoading } = useQuery<ClientReportData>({
     queryKey: ["/api/reports/clients"],
   });
 
@@ -21,18 +48,20 @@ export default function ClientReport() {
     );
   }
 
-  const { clients = [], topClients = [], summary = {} } = reportData || {};
+  const clients = reportData?.clients ?? [];
+  const topClients = reportData?.topClients ?? [];
+  const summary = reportData?.summary ?? { totalClients: 0, activeClients: 0, totalJobsAllClients: 0, avgJobsPerClient: 0 };
 
-  const topClientsChartData = topClients.map((client: any) => ({
+  const topClientsChartData = topClients.map((client) => ({
     name: client.name.substring(0, 15),
     jobs: client.totalJobs,
     active: client.activeJobs,
     completed: client.completedJobs
   }));
 
-  const jobTypeDistribution = topClients.reduce((acc: any, client: any) => {
+  const jobTypeDistribution = topClients.reduce((acc: Record<string, number>, client) => {
     Object.entries(client.jobTypeBreakdown || {}).forEach(([type, count]) => {
-      acc[type] = (acc[type] || 0) + (count as number);
+      acc[type] = (acc[type] || 0) + count;
     });
     return acc;
   }, {});
@@ -167,7 +196,7 @@ export default function ClientReport() {
                   </TableCell>
                 </TableRow>
               ) : (
-                clients.map((client: any) => (
+                clients.map((client) => (
                   <TableRow key={client.clientId}>
                     <TableCell>
                       <div>
@@ -243,14 +272,14 @@ export default function ClientReport() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {topClients.map((client: any) => (
+                {topClients.map((client) => (
                   <TableRow key={`breakdown-${client.clientId}`}>
                     <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
                         {Object.entries(client.jobTypeBreakdown || {}).map(([type, count]) => (
                           <Badge key={type} variant="secondary">
-                            {type}: {count as number}
+                            {type}: {count}
                           </Badge>
                         ))}
                       </div>

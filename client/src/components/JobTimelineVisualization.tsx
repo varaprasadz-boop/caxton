@@ -6,7 +6,7 @@ import { AlertTriangle, Clock, CheckCircle, User, Calendar, TrendingUp, BarChart
 import StatusBadge from "./StatusBadge";
 import { format, differenceInDays, differenceInHours, isAfter, isBefore } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import type { Task, Employee, Job, Client } from "@shared/schema";
+import type { Task, Employee, Job, Client, Department } from "@shared/schema";
 
 interface JobTimelineVisualizationProps {
   jobId: string;
@@ -36,6 +36,10 @@ export default function JobTimelineVisualization({
     queryKey: ["/api/clients"]
   });
 
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"]
+  });
+
   if (!job) {
     return (
       <Card>
@@ -49,6 +53,13 @@ export default function JobTimelineVisualization({
   // Create lookup maps
   const employeeMap = new Map(employees.map(e => [e.id, e]));
   const clientMap = new Map(clients.map(c => [c.id, c]));
+  const departmentMap = new Map(departments.map(d => [d.id, d]));
+
+  // Helper to get stage name from department
+  const getStageName = (task: Task): string => {
+    const department = departmentMap.get(task.departmentId);
+    return department?.name || "Unknown";
+  };
 
   // Filter tasks for this job
   const jobTasks = tasks.filter(task => task.jobId === jobId);
@@ -69,13 +80,8 @@ export default function JobTimelineVisualization({
     );
   }
 
-  // Sort tasks by creation order (assuming order by stage)
-  const stageOrder = ["Pre-Press", "Printing", "Cutting", "Folding", "Binding", "QC", "Packaging", "Dispatch"];
-  const sortedTasks = [...jobTasks].sort((a, b) => {
-    const orderA = stageOrder.indexOf(a.stage);
-    const orderB = stageOrder.indexOf(b.stage);
-    return orderA - orderB;
-  });
+  // Sort tasks by order field
+  const sortedTasks = [...jobTasks].sort((a, b) => a.order - b.order);
 
   // Calculate job progress
   const completedTasks = sortedTasks.filter(task => task.status === "completed").length;
@@ -187,7 +193,7 @@ export default function JobTimelineVisualization({
                 <div>
                   <div className="font-medium text-sm">Workflow Bottlenecks Detected</div>
                   <div className="text-xs text-muted-foreground">
-                    {bottlenecks.length} stage{bottlenecks.length > 1 ? "s" : ""} need attention: {bottlenecks.map(t => t.stage).join(", ")}
+                    {bottlenecks.length} stage{bottlenecks.length > 1 ? "s" : ""} need attention: {bottlenecks.map(t => getStageName(t)).join(", ")}
                   </div>
                 </div>
               </div>
@@ -234,7 +240,7 @@ export default function JobTimelineVisualization({
                   <div className="flex-1 min-w-0 pb-6">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <h4 className="font-semibold text-base">{task.stage}</h4>
+                        <h4 className="font-semibold text-base">{getStageName(task)}</h4>
                         <StatusBadge 
                           status={isOverdue ? "overdue" : task.status} 
                           variant="task" 

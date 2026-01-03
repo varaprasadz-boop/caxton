@@ -88,6 +88,7 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private clients: Map<string, Client>;
   private departments: Map<string, Department>;
+  private rolesMap: Map<string, Role>;
   private employees: Map<string, Employee>;
   private machines: Map<string, Machine>;
   private jobs: Map<string, Job>;
@@ -96,6 +97,7 @@ export class MemStorage implements IStorage {
   constructor() {
     this.clients = new Map();
     this.departments = new Map();
+    this.rolesMap = new Map();
     this.employees = new Map();
     this.machines = new Map();
     this.jobs = new Map();
@@ -179,6 +181,44 @@ export class MemStorage implements IStorage {
 
   async deleteDepartment(id: string): Promise<boolean> {
     return this.departments.delete(id);
+  }
+
+  // Roles
+  async getRole(id: string): Promise<Role | undefined> {
+    return this.rolesMap.get(id);
+  }
+
+  async getRoles(): Promise<Role[]> {
+    return Array.from(this.rolesMap.values());
+  }
+
+  async createRole(insertRole: InsertRole): Promise<Role> {
+    const id = randomUUID();
+    const createdAt = new Date();
+    const role: Role = {
+      ...insertRole,
+      id,
+      description: insertRole.description || null,
+      createdAt
+    };
+    this.rolesMap.set(id, role);
+    return role;
+  }
+
+  async updateRole(id: string, updates: Partial<InsertRole>): Promise<Role | undefined> {
+    const role = this.rolesMap.get(id);
+    if (!role) return undefined;
+    
+    const updatedRole: Role = {
+      ...role,
+      ...updates
+    };
+    this.rolesMap.set(id, updatedRole);
+    return updatedRole;
+  }
+
+  async deleteRole(id: string): Promise<boolean> {
+    return this.rolesMap.delete(id);
   }
 
   // Employees
@@ -280,6 +320,7 @@ export class MemStorage implements IStorage {
       jobNumber: nextJobNumber,
       createdAt,
       status: insertJob.status || "pending",
+      jobName: insertJob.jobName ?? null,
       description: insertJob.description || null,
       size: insertJob.size || null,
       colors: insertJob.colors || null,

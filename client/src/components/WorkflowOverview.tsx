@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import type { Task, Employee, Job, Client } from "@shared/schema";
+import type { Task, Employee, Job, Client, Department } from "@shared/schema";
 import { format, differenceInDays, differenceInHours, isAfter } from "date-fns";
 
 export default function WorkflowOverview() {
@@ -34,10 +34,21 @@ export default function WorkflowOverview() {
     queryKey: ["/api/clients"]
   });
 
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"]
+  });
+
   // Create lookup maps
   const employeeMap = new Map(employees.map(e => [e.id, e]));
   const jobMap = new Map(jobs.map(j => [j.id, j]));
   const clientMap = new Map(clients.map(c => [c.id, c]));
+  const departmentMap = new Map(departments.map(d => [d.id, d]));
+
+  // Helper to get stage name from department
+  const getStageName = (task: Task): string => {
+    const department = departmentMap.get(task.departmentId);
+    return department?.name || "Unknown";
+  };
 
   const now = new Date();
 
@@ -62,11 +73,12 @@ export default function WorkflowOverview() {
     const isAtRisk = differenceInDays(taskDeadline, now) <= 1 && task.status === "pending";
     
     if (isOverdue || isAtRisk) {
-      const existing = stageBottlenecks.get(task.stage) || {
-        stage: task.stage,
+      const stageName = getStageName(task);
+      const existing = stageBottlenecks.get(stageName) || {
+        stage: stageName,
         tasksAtRisk: 0,
         averageDelay: 0,
-        affectedJobs: []
+        affectedJobs: [] as string[]
       };
       
       existing.tasksAtRisk += 1;
@@ -75,7 +87,7 @@ export default function WorkflowOverview() {
         existing.affectedJobs.push(job.id);
       }
       
-      stageBottlenecks.set(task.stage, existing);
+      stageBottlenecks.set(stageName, existing);
     }
   });
 
@@ -112,14 +124,14 @@ export default function WorkflowOverview() {
   // Filter tasks for detailed view
   const filteredTasks = tasks
     .filter(task => {
-      const matchesStage = stageFilter === "all" || task.stage === stageFilter;
+      const matchesStage = stageFilter === "all" || getStageName(task) === stageFilter;
       const matchesStatus = statusFilter === "all" || task.status === statusFilter;
       const job = jobMap.get(task.jobId);
       const client = job ? clientMap.get(job.clientId) : null;
       const employee = task.employeeId ? employeeMap.get(task.employeeId) : null;
       
       const matchesSearch = !searchTerm || 
-        task.stage.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getStageName(task).toLowerCase().includes(searchTerm.toLowerCase()) ||
         job?.jobType.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         employee?.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -353,7 +365,7 @@ export default function WorkflowOverview() {
                         >
                           {task.status}
                         </Badge>
-                        <span className="font-medium">{task.stage}</span>
+                        <span className="font-medium">{getStageName(task)}</span>
                         {isOverdue && (
                           <Badge variant="destructive" className="text-xs">
                             <AlertTriangle className="h-3 w-3 mr-1" />

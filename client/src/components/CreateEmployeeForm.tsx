@@ -82,7 +82,7 @@ export default function CreateEmployeeForm({ onSuccess, onCancel }: CreateEmploy
     }
   };
 
-  const handleChange = (field: keyof InsertEmployee) => (
+  const handleChange = (field: keyof InsertEmployee | 'password') => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));

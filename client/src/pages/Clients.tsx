@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Eye, Edit, Building2, Mail, Phone, Briefcase, Copy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { Client } from "@shared/schema";
+import type { Client, Job } from "@shared/schema";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,14 +32,14 @@ export default function Clients() {
     queryKey: ["/api/clients"]
   });
 
-  const { data: jobs = [] } = useQuery({
+  const { data: jobs = [] } = useQuery<Job[]>({
     queryKey: ["/api/jobs"]
   });
 
   // Calculate job stats for each client and format client number
   const clientsWithStats = clients.map(client => {
-    const clientJobs = jobs.filter((job: any) => job.clientId === client.id);
-    const activeJobs = clientJobs.filter((job: any) => !["completed", "delivered"].includes(job.status)).length;
+    const clientJobs = jobs.filter((job) => job.clientId === client.id);
+    const activeJobs = clientJobs.filter((job) => !["completed", "delivered"].includes(job.status)).length;
     const formattedClientNumber = formatClientNumber(client.clientNumber);
     
     return {

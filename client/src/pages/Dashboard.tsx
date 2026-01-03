@@ -15,6 +15,24 @@ import { useQuery } from "@tanstack/react-query";
 import { usePermissions } from "@/hooks/use-permissions";
 import type { Job, Client } from "@shared/schema";
 
+interface JobStats {
+  totalJobs: number;
+  activeJobs: number;
+  completedJobs: number;
+  overdueJobs: number;
+}
+
+interface DeadlineItem {
+  id: string;
+  title: string;
+  type: "job" | "task";
+  client?: string;
+  employee?: string;
+  deadline: Date;
+  status: string;
+  stage?: string;
+}
+
 export default function Dashboard() {
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [, setLocation] = useLocation();
@@ -29,11 +47,11 @@ export default function Dashboard() {
     queryKey: ["/api/clients"]
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<JobStats>({
     queryKey: ["/api/stats/jobs"]
   });
 
-  const { data: alerts = [] } = useQuery({
+  const { data: alerts = [] } = useQuery<DeadlineItem[]>({
     queryKey: ["/api/alerts/deadlines"]
   });
 
@@ -52,7 +70,7 @@ export default function Dashboard() {
       quantity: job.quantity,
       deadline: new Date(job.deadline),
       status: job.status,
-      description: job.description
+      description: job.description ?? undefined
     }));
 
   const handleCreateJob = () => {
