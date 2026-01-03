@@ -8,8 +8,37 @@ import { Calendar, Clock, AlertTriangle, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import StatusBadge from "@/components/StatusBadge";
 
+interface TaskTimeline {
+  stage: string;
+  status: string;
+  deadline: string;
+  isOverdue: boolean;
+  daysUntilDeadline: number;
+}
+
+interface JobTimeline {
+  jobId: string;
+  jobType: string;
+  description: string | null;
+  client: string;
+  status: string;
+  deadline: string;
+  createdAt: string | null;
+  daysUntilDeadline: number;
+  isOverdue: boolean;
+  totalDuration: number;
+  progress: number;
+  tasks: TaskTimeline[];
+}
+
+interface TimelineReportData {
+  timeline: JobTimeline[];
+  upcomingDeadlines: JobTimeline[];
+  overdueJobs: JobTimeline[];
+}
+
 export default function TimelineReport() {
-  const { data: reportData, isLoading } = useQuery({
+  const { data: reportData, isLoading } = useQuery<TimelineReportData>({
     queryKey: ["/api/reports/timeline"],
   });
 
@@ -21,12 +50,14 @@ export default function TimelineReport() {
     );
   }
 
-  const { timeline = [], upcomingDeadlines = [], overdueJobs = [] } = reportData || {};
+  const timeline = reportData?.timeline ?? [];
+  const upcomingDeadlines = reportData?.upcomingDeadlines ?? [];
+  const overdueJobs = reportData?.overdueJobs ?? [];
 
-  const activeJobs = timeline.filter((j: any) => !["completed", "delivered"].includes(j.status));
-  const completedJobs = timeline.filter((j: any) => ["completed", "delivered"].includes(j.status));
+  const activeJobs = timeline.filter((j) => !["completed", "delivered"].includes(j.status));
+  const completedJobs = timeline.filter((j) => ["completed", "delivered"].includes(j.status));
 
-  const timelineChartData = upcomingDeadlines.slice(0, 10).map((job: any) => ({
+  const timelineChartData = upcomingDeadlines.slice(0, 10).map((job) => ({
     name: job.jobType.substring(0, 10),
     daysLeft: job.daysUntilDeadline,
     progress: job.progress
@@ -119,7 +150,7 @@ export default function TimelineReport() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {overdueJobs.map((job: any) => (
+                {overdueJobs.map((job) => (
                   <TableRow key={job.jobId}>
                     <TableCell className="font-medium">{job.jobType}</TableCell>
                     <TableCell>{job.client}</TableCell>
@@ -174,9 +205,9 @@ export default function TimelineReport() {
                   </TableCell>
                 </TableRow>
               ) : (
-                upcomingDeadlines.map((job: any) => {
-                  const inProgressTask = job.tasks?.find((t: any) => t.status === "in-progress");
-                  const nextPendingTask = job.tasks?.find((t: any) => t.status === "pending");
+                upcomingDeadlines.map((job) => {
+                  const inProgressTask = job.tasks?.find((t) => t.status === "in-progress");
+                  const nextPendingTask = job.tasks?.find((t) => t.status === "pending");
                   const currentTask = inProgressTask || nextPendingTask;
 
                   return (
@@ -255,7 +286,7 @@ export default function TimelineReport() {
                   </TableCell>
                 </TableRow>
               ) : (
-                timeline.map((job: any) => (
+                timeline.map((job) => (
                   <TableRow key={job.jobId}>
                     <TableCell className="font-medium">{job.jobType}</TableCell>
                     <TableCell>{job.client}</TableCell>

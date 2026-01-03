@@ -12,11 +12,41 @@ import { format } from "date-fns";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+interface JobStat {
+  id: string;
+  jobType: string;
+  description: string | null;
+  client: string;
+  clientCompany: string | undefined;
+  quantity: number;
+  status: string;
+  deadline: string;
+  createdAt: string | null;
+  progress: number;
+  completedTasks: number;
+  totalTasks: number;
+  isOverdue: boolean;
+  daysUntilDeadline: number;
+  currentStage: string | null;
+}
+
+interface JobsReportData {
+  jobs: JobStat[];
+  summary: {
+    totalJobs: number;
+    activeJobs: number;
+    completedJobs: number;
+    overdueJobs: number;
+    byStatus: Record<string, number>;
+    byJobType: Record<string, number>;
+  };
+}
+
 export default function JobsReport() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [jobTypeFilter, setJobTypeFilter] = useState<string>("all");
 
-  const { data: reportData, isLoading } = useQuery({
+  const { data: reportData, isLoading } = useQuery<JobsReportData>({
     queryKey: ["/api/reports/jobs"],
   });
 
@@ -28,9 +58,10 @@ export default function JobsReport() {
     );
   }
 
-  const { jobs = [], summary = {} } = reportData || {};
+  const jobs = reportData?.jobs ?? [];
+  const summary = reportData?.summary ?? { totalJobs: 0, activeJobs: 0, completedJobs: 0, overdueJobs: 0, byStatus: {}, byJobType: {} };
 
-  const filteredJobs = jobs.filter((job: any) => {
+  const filteredJobs = jobs.filter((job) => {
     if (statusFilter !== "all" && job.status !== statusFilter) return false;
     if (jobTypeFilter !== "all" && job.jobType !== jobTypeFilter) return false;
     return true;
@@ -192,7 +223,7 @@ export default function JobsReport() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredJobs.map((job: any) => (
+                filteredJobs.map((job) => (
                   <TableRow key={job.id}>
                     <TableCell className="font-medium">{job.jobType}</TableCell>
                     <TableCell>

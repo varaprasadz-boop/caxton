@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +9,26 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertJobSchema, type InsertJob, type Client, type Machine, type Department, JOB_TYPES, type StageDeadlines } from "@shared/schema";
+import { 
+  insertJobSchema, 
+  type InsertJob, 
+  type Client, 
+  type Machine, 
+  type Department, 
+  JOB_TYPES, 
+  type StageDeadlines,
+  type PrePress,
+  type Printing,
+  type AdditionalProcess,
+  type CuttingSlip,
+  type CustomerDelivery,
+  type JobItem
+} from "@shared/schema";
 import { z } from "zod";
-import { Calendar, User, Upload, FileText, X } from "lucide-react";
+import { Calendar, User, Upload, FileText, X, Building2, Mail, Phone } from "lucide-react";
 import StageDeadlineAllocation from "@/components/StageTimeAllocation";
+import CollapsibleSection from "@/components/CollapsibleSection";
+import DynamicItemsTable from "@/components/DynamicItemsTable";
 
 interface CreateJobFormProps {
   onSuccess?: () => void;
@@ -39,7 +55,20 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     deadline: getDefaultDeadline(),
     status: "pending",
     stageDeadlines: {},
-    machineIds: []
+    machineIds: [],
+    // New Job Sheet fields
+    orderDate: undefined,
+    scheduleDate: undefined,
+    jobSpecs: "",
+    cls: "",
+    paper: "",
+    prePress: {},
+    printing: {},
+    additionalProcess: {},
+    cuttingSlip: {},
+    customerDelivery: {},
+    items: [],
+    partyPressRemarks: ""
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -108,6 +137,8 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
       const payload: any = {
         ...data,
         deadline: data.deadline.toISOString(),
+        orderDate: data.orderDate ? data.orderDate.toISOString() : undefined,
+        scheduleDate: data.scheduleDate ? data.scheduleDate.toISOString() : undefined,
       };
       
       if (poFileUrl) {
@@ -172,8 +203,8 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     let value: any = e.target.value;
     if (field === "quantity") {
       value = parseInt(value) || 0;
-    } else if (field === "deadline") {
-      value = new Date(value);
+    } else if (field === "deadline" || field === "orderDate" || field === "scheduleDate") {
+      value = e.target.value ? new Date(e.target.value) : undefined;
     }
     
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -241,14 +272,61 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
   };
 
   // Format date for input with validation
-  const formatDateForInput = (date: Date) => {
+  const formatDateForInput = (date: Date | null | undefined) => {
     if (!date || isNaN(date.getTime())) {
-      // Return tomorrow's date if invalid date provided
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return tomorrow.toISOString().split('T')[0];
+      return "";
     }
     return date.toISOString().split('T')[0];
+  };
+
+  // Handlers for nested object fields
+  const handlePrePressChange = (field: keyof NonNullable<PrePress>) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      prePress: { ...prev.prePress, [field]: e.target.value }
+    }));
+  };
+
+  const handlePrintingChange = (field: keyof NonNullable<Printing>) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      printing: { ...prev.printing, [field]: e.target.value }
+    }));
+  };
+
+  const handleAdditionalProcessChange = (field: keyof NonNullable<AdditionalProcess>) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalProcess: { ...prev.additionalProcess, [field]: e.target.value }
+    }));
+  };
+
+  const handleCuttingSlipChange = (field: keyof NonNullable<CuttingSlip>) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      cuttingSlip: { ...prev.cuttingSlip, [field]: e.target.value }
+    }));
+  };
+
+  const handleCustomerDeliveryChange = (field: keyof NonNullable<CustomerDelivery>) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      customerDelivery: { ...prev.customerDelivery, [field]: e.target.value }
+    }));
+  };
+
+  const handleItemsChange = (items: JobItem[]) => {
+    setFormData(prev => ({ ...prev, items }));
   };
 
   const selectedClient = clients.find(c => c.id === formData.clientId);
@@ -285,11 +363,6 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
               {errors.clientId && (
                 <p className="text-sm text-destructive">{errors.clientId}</p>
               )}
-              {selectedClient && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedClient.email} • {selectedClient.phone}
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -311,6 +384,42 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
               )}
             </div>
           </div>
+
+          {/* Client Info Display (Auto-populated, read-only) */}
+          {selectedClient && (
+            <CollapsibleSection title="Client Information (Auto-filled)" defaultOpen={false}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Client Name</Label>
+                  <div className="flex items-center gap-2 p-2 bg-muted rounded text-sm">
+                    <User className="h-3 w-3" />
+                    {selectedClient.name}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Company</Label>
+                  <div className="flex items-center gap-2 p-2 bg-muted rounded text-sm">
+                    <Building2 className="h-3 w-3" />
+                    {selectedClient.company}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <div className="flex items-center gap-2 p-2 bg-muted rounded text-sm">
+                    <Mail className="h-3 w-3" />
+                    {selectedClient.email}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Phone</Label>
+                  <div className="flex items-center gap-2 p-2 bg-muted rounded text-sm">
+                    <Phone className="h-3 w-3" />
+                    {selectedClient.phone}
+                  </div>
+                </div>
+              </div>
+            </CollapsibleSection>
+          )}
 
           {/* Job Name */}
           <div className="space-y-2">
@@ -368,7 +477,6 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                 type="date"
                 value={formatDateForInput(formData.deadline)}
                 onChange={handleChange("deadline")}
-                min={formatDateForInput(new Date())}
                 data-testid="input-job-deadline"
               />
               {errors.deadline && (
@@ -422,10 +530,392 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
             </div>
           </div>
 
+          {/* Order & Schedule Details */}
+          <CollapsibleSection title="Order & Schedule Details" defaultOpen={false}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="orderDate">Order Date</Label>
+                <Input
+                  id="orderDate"
+                  type="date"
+                  value={formatDateForInput(formData.orderDate)}
+                  onChange={handleChange("orderDate")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scheduleDate">Schedule Date</Label>
+                <Input
+                  id="scheduleDate"
+                  type="date"
+                  value={formatDateForInput(formData.scheduleDate)}
+                  onChange={handleChange("scheduleDate")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="jobSpecs">Job Specs</Label>
+                <Input
+                  id="jobSpecs"
+                  value={formData.jobSpecs || ""}
+                  onChange={handleChange("jobSpecs")}
+                  placeholder="Enter specs"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cls">Cls</Label>
+                <Input
+                  id="cls"
+                  value={formData.cls || ""}
+                  onChange={handleChange("cls")}
+                  placeholder="Classification"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="paper">Paper</Label>
+                <Input
+                  id="paper"
+                  value={formData.paper || ""}
+                  onChange={handleChange("paper")}
+                  placeholder="Paper type"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Pre-Press Specifications */}
+          <CollapsibleSection title="Pre-Press Specifications" defaultOpen={false}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Special Instructions</Label>
+                <Textarea
+                  value={formData.prePress?.specialInstructions || ""}
+                  onChange={handlePrePressChange("specialInstructions")}
+                  placeholder="Enter special instructions"
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>File Name</Label>
+                <Input
+                  value={formData.prePress?.fileName || ""}
+                  onChange={handlePrePressChange("fileName")}
+                  placeholder="File name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Output ST</Label>
+                <Input
+                  value={formData.prePress?.outputST || ""}
+                  onChange={handlePrePressChange("outputST")}
+                  placeholder="Output ST"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Output FT</Label>
+                <Input
+                  value={formData.prePress?.outputFT || ""}
+                  onChange={handlePrePressChange("outputFT")}
+                  placeholder="Output FT"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Paper / GSM</Label>
+                <Input
+                  value={formData.prePress?.paperGSM || ""}
+                  onChange={handlePrePressChange("paperGSM")}
+                  placeholder="Paper / GSM"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Paper Size</Label>
+                <Input
+                  value={formData.prePress?.paperSize || ""}
+                  onChange={handlePrePressChange("paperSize")}
+                  placeholder="Paper size"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>No. of Sheets Cut</Label>
+                <Input
+                  value={formData.prePress?.sheetsCount || ""}
+                  onChange={handlePrePressChange("sheetsCount")}
+                  placeholder="Sheets count"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cut Size</Label>
+                <Input
+                  value={formData.prePress?.cutSize || ""}
+                  onChange={handlePrePressChange("cutSize")}
+                  placeholder="Cut size"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Machine</Label>
+                <Input
+                  value={formData.prePress?.machine || ""}
+                  onChange={handlePrePressChange("machine")}
+                  placeholder="Machine"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Duration Time ST</Label>
+                <Input
+                  value={formData.prePress?.durationST || ""}
+                  onChange={handlePrePressChange("durationST")}
+                  placeholder="Duration ST"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Duration Time FT</Label>
+                <Input
+                  value={formData.prePress?.durationFT || ""}
+                  onChange={handlePrePressChange("durationFT")}
+                  placeholder="Duration FT"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Printing Information */}
+          <CollapsibleSection title="Printing Information" defaultOpen={false}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Printing Size</Label>
+                <Input
+                  value={formData.printing?.printingSize || ""}
+                  onChange={handlePrintingChange("printingSize")}
+                  placeholder="Printing size"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Impression</Label>
+                <Input
+                  value={formData.printing?.impression || ""}
+                  onChange={handlePrintingChange("impression")}
+                  placeholder="Impression"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Coating</Label>
+                <Input
+                  value={formData.printing?.coating || ""}
+                  onChange={handlePrintingChange("coating")}
+                  placeholder="Coating"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Duration Time ST</Label>
+                <Input
+                  value={formData.printing?.durationST || ""}
+                  onChange={handlePrintingChange("durationST")}
+                  placeholder="Duration ST"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Duration Time FT</Label>
+                <Input
+                  value={formData.printing?.durationFT || ""}
+                  onChange={handlePrintingChange("durationFT")}
+                  placeholder="Duration FT"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Wastage</Label>
+                <Input
+                  value={formData.printing?.wastage || ""}
+                  onChange={handlePrintingChange("wastage")}
+                  placeholder="Wastage"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Additional Process */}
+          <CollapsibleSection title="Additional Process" defaultOpen={false}>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Coating</Label>
+                <Input
+                  value={formData.additionalProcess?.coating || ""}
+                  onChange={handleAdditionalProcessChange("coating")}
+                  placeholder="Coating"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Threading</Label>
+                <Input
+                  value={formData.additionalProcess?.threading || ""}
+                  onChange={handleAdditionalProcessChange("threading")}
+                  placeholder="Threading"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Lamination</Label>
+                <Input
+                  value={formData.additionalProcess?.lamination || ""}
+                  onChange={handleAdditionalProcessChange("lamination")}
+                  placeholder="Lamination"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>'I' Lets</Label>
+                <Input
+                  value={formData.additionalProcess?.iLets || ""}
+                  onChange={handleAdditionalProcessChange("iLets")}
+                  placeholder="I Lets"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Foiling</Label>
+                <Input
+                  value={formData.additionalProcess?.foiling || ""}
+                  onChange={handleAdditionalProcessChange("foiling")}
+                  placeholder="Foiling"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Folding</Label>
+                <Input
+                  value={formData.additionalProcess?.folding || ""}
+                  onChange={handleAdditionalProcessChange("folding")}
+                  placeholder="Folding"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Spot U.V</Label>
+                <Input
+                  value={formData.additionalProcess?.spotUV || ""}
+                  onChange={handleAdditionalProcessChange("spotUV")}
+                  placeholder="Spot UV"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Section / Centre</Label>
+                <Input
+                  value={formData.additionalProcess?.sectionCentre || ""}
+                  onChange={handleAdditionalProcessChange("sectionCentre")}
+                  placeholder="Section / Centre"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Punching</Label>
+                <Input
+                  value={formData.additionalProcess?.punching || ""}
+                  onChange={handleAdditionalProcessChange("punching")}
+                  placeholder="Punching"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Perfect Binding</Label>
+                <Input
+                  value={formData.additionalProcess?.perfectBinding || ""}
+                  onChange={handleAdditionalProcessChange("perfectBinding")}
+                  placeholder="Perfect Binding"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Pasting</Label>
+                <Input
+                  value={formData.additionalProcess?.pasting || ""}
+                  onChange={handleAdditionalProcessChange("pasting")}
+                  placeholder="Pasting"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Centre Pinning</Label>
+                <Input
+                  value={formData.additionalProcess?.centrePinning || ""}
+                  onChange={handleAdditionalProcessChange("centrePinning")}
+                  placeholder="Centre Pinning"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Cutting Slip */}
+          <CollapsibleSection title="Cutting Slip" defaultOpen={false}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Bill No</Label>
+                <Input
+                  value={formData.cuttingSlip?.billNo || ""}
+                  onChange={handleCuttingSlipChange("billNo")}
+                  placeholder="Bill No"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cut Size</Label>
+                <Input
+                  value={formData.cuttingSlip?.cutSize || ""}
+                  onChange={handleCuttingSlipChange("cutSize")}
+                  placeholder="Cut Size"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>GSM</Label>
+                <Input
+                  value={formData.cuttingSlip?.gsm || ""}
+                  onChange={handleCuttingSlipChange("gsm")}
+                  placeholder="GSM"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Machine</Label>
+                <Input
+                  value={formData.cuttingSlip?.machine || ""}
+                  onChange={handleCuttingSlipChange("machine")}
+                  placeholder="Machine"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Customer & Delivery */}
+          <CollapsibleSection title="Customer & Delivery" defaultOpen={false}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Wastage</Label>
+                <Input
+                  value={formData.customerDelivery?.wastage || ""}
+                  onChange={handleCustomerDeliveryChange("wastage")}
+                  placeholder="Wastage"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Client Details</Label>
+                <Textarea
+                  value={formData.customerDelivery?.clientDetails || ""}
+                  onChange={handleCustomerDeliveryChange("clientDetails")}
+                  placeholder="Additional client details"
+                  rows={2}
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Items */}
+          <CollapsibleSection title="Items" defaultOpen={false}>
+            <DynamicItemsTable
+              items={formData.items || []}
+              onChange={handleItemsChange}
+            />
+          </CollapsibleSection>
+
+          {/* Party Press Remarks */}
+          <CollapsibleSection title="Party Press Remarks" defaultOpen={false}>
+            <div className="space-y-2">
+              <Textarea
+                value={formData.partyPressRemarks || ""}
+                onChange={handleChange("partyPressRemarks")}
+                placeholder="Enter party press remarks..."
+                rows={4}
+              />
+            </div>
+          </CollapsibleSection>
+
           {/* Machine Selection */}
           {machines.length > 0 && (
-            <div className="space-y-3">
-              <Label>Select Machines (Optional)</Label>
+            <CollapsibleSection title="Select Machines (Optional)" defaultOpen={false}>
               <div className="space-y-4">
                 {departments.map((dept) => {
                   const deptMachines = machinesByDepartment[dept.id] || [];
@@ -457,11 +947,11 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                 })}
               </div>
               {(formData.machineIds || []).length > 0 && (
-                <p className="text-xs text-muted-foreground" data-testid="text-selected-machines-count">
+                <p className="text-xs text-muted-foreground mt-3" data-testid="text-selected-machines-count">
                   {(formData.machineIds || []).length} machine(s) selected
                 </p>
               )}
-            </div>
+            </CollapsibleSection>
           )}
 
           {/* PO File Upload */}

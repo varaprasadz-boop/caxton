@@ -197,8 +197,9 @@ app.get("/api/me", requireAuth, async (req, res) => {
           res.send(fileBuffer);
           fileServed = true;
           console.log(`File served from object storage: ${filename}`);
-        } catch (objectStorageError) {
-          console.warn(`Object storage failed for ${filename}, trying local storage:`, objectStorageError.message);
+        } catch (objectStorageError: unknown) {
+          const errorMessage = objectStorageError instanceof Error ? objectStorageError.message : String(objectStorageError);
+          console.warn(`Object storage failed for ${filename}, trying local storage:`, errorMessage);
         }
       }
       

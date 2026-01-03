@@ -7,8 +7,36 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Users, TrendingUp, CheckCircle, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+interface EmployeePerformance {
+  employeeId: string;
+  name: string;
+  email: string;
+  department: string;
+  totalTasks: number;
+  completedTasks: number;
+  activeTasks: number;
+  overdueTasks: number;
+  completionRate: number;
+  onTimeRate: number;
+}
+
+interface DepartmentPerformance {
+  departmentId: string;
+  name: string;
+  employeeCount: number;
+  totalTasks: number;
+  completedTasks: number;
+  activeTasks: number;
+  completionRate: number;
+}
+
+interface PerformanceReportData {
+  employees: EmployeePerformance[];
+  departments: DepartmentPerformance[];
+}
+
 export default function PerformanceReport() {
-  const { data: reportData, isLoading } = useQuery({
+  const { data: reportData, isLoading } = useQuery<PerformanceReportData>({
     queryKey: ["/api/reports/performance"],
   });
 
@@ -20,13 +48,14 @@ export default function PerformanceReport() {
     );
   }
 
-  const { employees = [], departments = [] } = reportData || {};
+  const employees = reportData?.employees ?? [];
+  const departments = reportData?.departments ?? [];
 
   const topPerformers = [...employees]
-    .sort((a: any, b: any) => b.completionRate - a.completionRate)
+    .sort((a, b) => b.completionRate - a.completionRate)
     .slice(0, 5);
 
-  const employeeChartData = topPerformers.map((emp: any) => ({
+  const employeeChartData = topPerformers.map((emp) => ({
     name: emp.name.split(' ')[0],
     completed: emp.completedTasks,
     active: emp.activeTasks,
@@ -34,18 +63,18 @@ export default function PerformanceReport() {
     rate: emp.completionRate
   }));
 
-  const departmentChartData = departments.map((dept: any) => ({
+  const departmentChartData = departments.map((dept) => ({
     name: dept.name,
     completed: dept.completedTasks,
     active: dept.activeTasks,
     rate: dept.completionRate
   }));
 
-  const totalTasksCompleted = employees.reduce((sum: number, emp: any) => sum + emp.completedTasks, 0);
-  const totalActiveTasks = employees.reduce((sum: number, emp: any) => sum + emp.activeTasks, 0);
-  const totalOverdueTasks = employees.reduce((sum: number, emp: any) => sum + emp.overdueTasks, 0);
+  const totalTasksCompleted = employees.reduce((sum, emp) => sum + emp.completedTasks, 0);
+  const totalActiveTasks = employees.reduce((sum, emp) => sum + emp.activeTasks, 0);
+  const totalOverdueTasks = employees.reduce((sum, emp) => sum + emp.overdueTasks, 0);
   const avgCompletionRate = employees.length > 0
-    ? employees.reduce((sum: number, emp: any) => sum + emp.completionRate, 0) / employees.length
+    ? employees.reduce((sum, emp) => sum + emp.completionRate, 0) / employees.length
     : 0;
 
   return (
@@ -147,7 +176,7 @@ export default function PerformanceReport() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    employees.map((employee: any) => (
+                    employees.map((employee) => (
                       <TableRow key={employee.employeeId}>
                         <TableCell>
                           <div>
@@ -245,7 +274,7 @@ export default function PerformanceReport() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    departments.map((dept: any) => (
+                    departments.map((dept) => (
                       <TableRow key={dept.departmentId}>
                         <TableCell className="font-medium">{dept.name}</TableCell>
                         <TableCell>{dept.employeeCount}</TableCell>

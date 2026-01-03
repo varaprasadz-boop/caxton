@@ -73,6 +73,34 @@ export const jobs = pgTable("jobs", {
   machineIds: text("machine_ids").array(), // Array of machine IDs selected for this job
   status: text("status").notNull().default("pending"), // pending, pre-press, printing, cutting, folding, binding, qc, packaging, dispatch, delivered, completed
   createdAt: timestamp("created_at").default(sql`now()`),
+  
+  // New fields for Job Sheet
+  orderDate: timestamp("order_date"), // Order date
+  scheduleDate: timestamp("schedule_date"), // Schedule date
+  jobSpecs: text("job_specs"), // Job specifications
+  cls: text("cls"), // Classification
+  paper: text("paper"), // Paper type
+  
+  // Pre-Press specifications (JSON object)
+  prePress: json("pre_press"), // { specialInstructions, fileName, outputST, outputFT, paperGSM, paperSize, sheetsCount, cutSize, machine, durationST, durationFT }
+  
+  // Printing information (JSON object)
+  printing: json("printing"), // { printingSize, impression, coating, durationST, durationFT, wastage }
+  
+  // Additional process options (JSON object)
+  additionalProcess: json("additional_process"), // { coating, threading, lamination, iLets, foiling, folding, spotUV, sectionCentre, punching, perfectBinding, pasting, centrePinning }
+  
+  // Cutting slip (JSON object)
+  cuttingSlip: json("cutting_slip"), // { billNo, cutSize, gsm, machine }
+  
+  // Customer & delivery (JSON object)
+  customerDelivery: json("customer_delivery"), // { wastage, clientDetails }
+  
+  // Items table (JSON array)
+  items: json("items"), // [{ item1, item2, remarks }, ...]
+  
+  // Party press remarks
+  partyPressRemarks: text("party_press_remarks"),
 });
 
 // Tasks table
@@ -105,6 +133,65 @@ export const companySettings = pgTable("company_settings", {
 
 // Stage deadline allocation schema
 export const stageDeadlinesSchema = z.record(z.string(), z.string().datetime()); // stage name -> ISO date string
+
+// Job Sheet section schemas (all fields are optional alphanumeric)
+export const prePressSchema = z.object({
+  specialInstructions: z.string().optional(),
+  fileName: z.string().optional(),
+  outputST: z.string().optional(),
+  outputFT: z.string().optional(),
+  paperGSM: z.string().optional(),
+  paperSize: z.string().optional(),
+  sheetsCount: z.string().optional(),
+  cutSize: z.string().optional(),
+  machine: z.string().optional(),
+  durationST: z.string().optional(),
+  durationFT: z.string().optional(),
+}).optional();
+
+export const printingSchema = z.object({
+  printingSize: z.string().optional(),
+  impression: z.string().optional(),
+  coating: z.string().optional(),
+  durationST: z.string().optional(),
+  durationFT: z.string().optional(),
+  wastage: z.string().optional(),
+}).optional();
+
+export const additionalProcessSchema = z.object({
+  coating: z.string().optional(),
+  threading: z.string().optional(),
+  lamination: z.string().optional(),
+  iLets: z.string().optional(),
+  foiling: z.string().optional(),
+  folding: z.string().optional(),
+  spotUV: z.string().optional(),
+  sectionCentre: z.string().optional(),
+  punching: z.string().optional(),
+  perfectBinding: z.string().optional(),
+  pasting: z.string().optional(),
+  centrePinning: z.string().optional(),
+}).optional();
+
+export const cuttingSlipSchema = z.object({
+  billNo: z.string().optional(),
+  cutSize: z.string().optional(),
+  gsm: z.string().optional(),
+  machine: z.string().optional(),
+}).optional();
+
+export const customerDeliverySchema = z.object({
+  wastage: z.string().optional(),
+  clientDetails: z.string().optional(),
+}).optional();
+
+export const jobItemSchema = z.object({
+  item1: z.string().optional(),
+  item2: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+export const jobItemsSchema = z.array(jobItemSchema).optional();
 
 // Permission structure schema
 export const modulePermissionSchema = z.object({
@@ -143,7 +230,14 @@ export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, jobNumb
   status: z.enum(["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"]).optional(),
   stageDeadlines: stageDeadlinesSchema.optional(),
   poFileUrl: z.string().min(1).optional(), // Allow relative URLs for local file storage
-  machineIds: z.array(z.string()).optional() // Array of machine IDs
+  machineIds: z.array(z.string()).optional(), // Array of machine IDs
+  // New Job Sheet fields
+  prePress: prePressSchema,
+  printing: printingSchema,
+  additionalProcess: additionalProcessSchema,
+  cuttingSlip: cuttingSlipSchema,
+  customerDelivery: customerDeliverySchema,
+  items: jobItemsSchema,
 });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, taskSequence: true, createdAt: true, updatedAt: true }).extend({
   status: z.enum(["pending", "in-queue", "in-progress", "completed", "delayed"]).optional(),
@@ -185,6 +279,15 @@ export type TaskStage = typeof TASK_STAGES[number];
 export type StageDeadlines = {
   [stageName: string]: string; // Stage name -> ISO date string
 };
+
+// Job Sheet section types
+export type PrePress = z.infer<typeof prePressSchema>;
+export type Printing = z.infer<typeof printingSchema>;
+export type AdditionalProcess = z.infer<typeof additionalProcessSchema>;
+export type CuttingSlip = z.infer<typeof cuttingSlipSchema>;
+export type CustomerDelivery = z.infer<typeof customerDeliverySchema>;
+export type JobItem = z.infer<typeof jobItemSchema>;
+export type JobItems = z.infer<typeof jobItemsSchema>;
 
 // Status enums
 export const JOB_STATUSES = ["pending", "pre-press", "printing", "cutting", "folding", "binding", "qc", "packaging", "dispatch", "delivered", "completed"] as const;

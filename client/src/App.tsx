@@ -21,6 +21,7 @@ import Roles from "@/pages/Roles";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
+import JobSheetPreview from "@/pages/JobSheetPreview";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -122,10 +123,28 @@ function AuthenticatedApp() {
 }
 
 function AppContent() {
+  const [location] = useLocation();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/me'],
     retry: false,
   });
+
+  // Job Sheet Preview is a standalone printable page (no sidebar)
+  if (location.match(/^\/jobs\/[^/]+\/sheet$/)) {
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      );
+    }
+    
+    if (!user) {
+      return <Login />;
+    }
+    
+    return <JobSheetPreview />;
+  }
 
   if (isLoading) {
     return (
