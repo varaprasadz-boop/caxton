@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Jobs from "@/pages/Jobs";
 import JobDetail from "@/pages/JobDetail";
+import JobPrintPreview from "@/pages/JobPrintPreview";
 import Tasks from "@/pages/Tasks";
 import Clients from "@/pages/Clients";
 import ClientDetail from "@/pages/ClientDetail";
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/jobs" component={Jobs} />
       <Route path="/jobs/:id" component={JobDetail} />
+      <Route path="/jobs/:id/print" component={JobPrintPreview} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/clients" component={Clients} />
       <Route path="/clients/:id" component={ClientDetail} />

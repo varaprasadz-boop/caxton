@@ -123,6 +123,10 @@ export default function JobDetail() {
   };
 
   const handlePrintJobCard = () => {
+    setLocation(`/jobs/${id}/print`);
+  };
+
+  const handlePrintJobCardLegacy = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow || !job) return;
 

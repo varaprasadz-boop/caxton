@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Calendar, User, Clock } from "lucide-react";
+import { Search, Calendar, User, Clock, Download } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Task, Employee, Job, Client, Department } from "@shared/schema";
 import { format } from "date-fns";
@@ -228,6 +228,45 @@ export default function Tasks() {
     updateStatusMutation.mutate({ taskId, status });
   };
 
+  const handleExportCSV = () => {
+    if (filteredTasks.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no tasks matching your current filters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Task ID", "Stage", "Job", "Assigned To", "Deadline", "Status"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredTasks.map(task => [
+        `"${task.formattedTaskId}"`,
+        `"${task.stage}"`,
+        `"${task.jobTitle}"`,
+        `"${task.assignedEmployeeName || 'Unassigned'}"`,
+        `"${format(new Date(task.deadline), "yyyy-MM-dd")}"`,
+        `"${task.status}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `tasks_export_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export successful",
+      description: `Exported ${filteredTasks.length} tasks to CSV`,
+    });
+  };
+
   const renderTaskTable = (taskList: typeof enhancedTasks, emptyMessage: string) => (
     <div className="rounded-md border">
       {taskList.length > 0 ? (
@@ -337,6 +376,10 @@ export default function Tasks() {
             Manage workflow tasks and assignments
           </p>
         </div>
+        <Button variant="outline" onClick={handleExportCSV} data-testid="button-export-tasks">
+          <Download className="mr-2 h-4 w-4" />
+          Export
+        </Button>
       </div>
 
       {/* Filters */}

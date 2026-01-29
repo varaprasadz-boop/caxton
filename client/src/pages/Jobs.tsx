@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Package, Calendar, Copy } from "lucide-react";
+import { Plus, Search, Eye, Package, Calendar, Copy, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Job, Client, Task } from "@shared/schema";
 import { format } from "date-fns";
@@ -108,6 +108,46 @@ export default function Jobs() {
     });
   };
 
+  const handleExportCSV = () => {
+    if (filteredJobs.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no jobs matching your current filters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Job ID", "Client", "Type", "Quantity", "Deadline", "Status", "Completion %"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredJobs.map(job => [
+        `"${job.jobNumber}"`,
+        `"${job.client}"`,
+        `"${job.jobType}"`,
+        job.quantity,
+        `"${format(job.deadline, "yyyy-MM-dd")}"`,
+        `"${job.isOverdue ? 'Overdue' : job.status}"`,
+        `${job.completionPercentage}%`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `jobs_export_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export successful",
+      description: `Exported ${filteredJobs.length} jobs to CSV`,
+    });
+  };
+
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-jobs">
       {/* Header */}
@@ -118,12 +158,18 @@ export default function Jobs() {
             Manage your printing jobs and track their progress
           </p>
         </div>
-        {canCreate('jobs') && (
-          <Button onClick={handleCreateJob} data-testid="button-create-job">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Job
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV} data-testid="button-export-jobs">
+            <Download className="mr-2 h-4 w-4" />
+            Export
           </Button>
-        )}
+          {canCreate('jobs') && (
+            <Button onClick={handleCreateJob} data-testid="button-create-job">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Job
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}

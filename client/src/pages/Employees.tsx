@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Pencil } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Employee, Department, Task } from "@shared/schema";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Employees() {
   const [, setLocation] = useLocation();
@@ -20,6 +21,7 @@ export default function Employees() {
   const [isCreateEmployeeModalOpen, setIsCreateEmployeeModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const { canCreate, canEdit, canView } = usePermissions();
+  const { toast } = useToast();
 
   const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ["/api/employees"]
@@ -86,6 +88,45 @@ export default function Employees() {
     return matchesSearch && matchesDepartment;
   });
 
+  const handleExportCSV = () => {
+    if (filteredEmployees.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no employees matching your current filters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Name", "Email", "Phone", "Department", "Active Tasks", "Completed Tasks"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredEmployees.map(employee => [
+        `"${employee.name}"`,
+        `"${employee.email}"`,
+        `"${employee.phone || ''}"`,
+        `"${employee.departmentId ? departmentMap[employee.departmentId] : 'Unassigned'}"`,
+        employee.activeTasks,
+        employee.completedTasks
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `employees_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export successful",
+      description: `Exported ${filteredEmployees.length} employees to CSV`,
+    });
+  };
+
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-employees">
       <div className="flex items-center justify-between">
@@ -95,12 +136,18 @@ export default function Employees() {
             Manage your team members and their assignments
           </p>
         </div>
-        {canCreate('employees') && (
-          <Button onClick={handleCreateEmployee} data-testid="button-create-employee">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Employee
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV} data-testid="button-export-employees">
+            <Download className="mr-2 h-4 w-4" />
+            Export
           </Button>
-        )}
+          {canCreate('employees') && (
+            <Button onClick={handleCreateEmployee} data-testid="button-create-employee">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Employee
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center">

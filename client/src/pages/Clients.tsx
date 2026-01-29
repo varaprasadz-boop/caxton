@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Edit, Building2, Mail, Phone, Briefcase, Copy } from "lucide-react";
+import { Plus, Search, Eye, Edit, Building2, Mail, Phone, Briefcase, Copy, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Client } from "@shared/schema";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -32,7 +32,7 @@ export default function Clients() {
     queryKey: ["/api/clients"]
   });
 
-  const { data: jobs = [] } = useQuery({
+  const { data: jobs = [] } = useQuery<any[]>({
     queryKey: ["/api/jobs"]
   });
 
@@ -91,6 +91,47 @@ export default function Clients() {
     });
   };
 
+  const handleExportCSV = () => {
+    if (filteredClients.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no clients matching your current filters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Client ID", "Name", "Company", "Email", "Phone", "Payment Method", "Active Jobs", "Total Jobs"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredClients.map(client => [
+        `"${client.formattedClientNumber}"`,
+        `"${client.name}"`,
+        `"${client.company}"`,
+        `"${client.email}"`,
+        `"${client.phone}"`,
+        `"${client.paymentMethod}"`,
+        client.activeJobs,
+        client.totalJobs
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `clients_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export successful",
+      description: `Exported ${filteredClients.length} clients to CSV`,
+    });
+  };
+
   return (
     <div className="flex-1 space-y-6 p-6" data-testid="page-clients">
       {/* Header */}
@@ -101,12 +142,18 @@ export default function Clients() {
             Manage your client relationships and contact information
           </p>
         </div>
-        {canCreate('clients') && (
-          <Button onClick={handleCreateClient} data-testid="button-create-client">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Client
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV} data-testid="button-export-clients">
+            <Download className="mr-2 h-4 w-4" />
+            Export
           </Button>
-        )}
+          {canCreate('clients') && (
+            <Button onClick={handleCreateClient} data-testid="button-create-client">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Client
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
