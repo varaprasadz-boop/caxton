@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Printer } from "lucide-react";
 import { format } from "date-fns";
-import { TASK_STAGES, type Job, type Client, type Machine, type Department, type ProductCategory, type StageDeadlines } from "@shared/schema";
+import { type Job, type Client, type Machine, type Department, type ProductCategory, type StageDeadlines } from "@shared/schema";
 
 function formatJobNumber(jobNumber: number, createdAt: Date | null): string {
   if (!createdAt) return `CAX${String(jobNumber).padStart(4, '0')}`;
@@ -175,6 +175,27 @@ export default function JobPrintPreview() {
           </div>
         </div>
 
+        {/* Client Details */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">Client Details</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <InfoRow label="Client Name" value={client?.name} />
+                <InfoRow label="Company" value={client?.company} />
+                <InfoRow label="GST No" value={client?.gstNo} />
+              </div>
+              <div>
+                <InfoRow label="Email" value={client?.email} />
+                <InfoRow label="Phone" value={client?.phone} />
+                <InfoRow label="Address" value={client?.address} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Section 1: Basic Information */}
         <Card className="mb-4 print:shadow-none print:border">
           <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
@@ -183,13 +204,11 @@ export default function JobPrintPreview() {
           <CardContent className="py-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <InfoRow label="Client" value={client?.name} />
-                <InfoRow label="Company" value={client?.company} />
                 <InfoRow label="Product Category" value={productCategory?.name} />
                 <InfoRow label="Job Name" value={job.jobName} />
+                <InfoRow label="Job Type" value={job.jobType} />
               </div>
               <div>
-                <InfoRow label="Job Type" value={job.jobType} />
                 <InfoRow label="Order Date" value={formatDate(job.orderDate)} />
                 <InfoRow label="Schedule Date" value={formatDate(job.scheduleDate)} />
                 <InfoRow label="Delivery Deadline" value={formatDate(job.deadline)} />
@@ -428,15 +447,15 @@ export default function JobPrintPreview() {
           </CardContent>
         </Card>
 
-        {/* Section 11: Stage Time Allocation */}
+        {/* Section 11: Department Task Allocation */}
         <Card className="mb-4 print:shadow-none print:border">
           <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">11. Stage Time Allocation</CardTitle>
+            <CardTitle className="text-lg">11. Department Task Allocation</CardTitle>
           </CardHeader>
           <CardContent className="py-2">
             <div className="grid grid-cols-2 gap-4">
-              {TASK_STAGES.map((stage) => (
-                <InfoRow key={stage} label={stage} value={stageDeadlines[stage] ? formatDate(stageDeadlines[stage]) : null} />
+              {[...departments].sort((a, b) => a.order - b.order).map((dept) => (
+                <InfoRow key={dept.id} label={dept.name} value={stageDeadlines[dept.id] ? formatDate(stageDeadlines[dept.id]) : null} />
               ))}
             </div>
           </CardContent>

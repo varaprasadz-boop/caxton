@@ -79,7 +79,7 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     items: false,
     machines: false,
     poFile: false,
-    stageAllocation: false
+    stageAllocation: true
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
