@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Printer } from "lucide-react";
 import { format } from "date-fns";
-import type { Job, Client, Employee, ProductCategory } from "@shared/schema";
+import { TASK_STAGES, type Job, type Client, type Machine, type Department, type ProductCategory, type StageDeadlines } from "@shared/schema";
 
 function formatJobNumber(jobNumber: number, createdAt: Date | null): string {
   if (!createdAt) return `CAX${String(jobNumber).padStart(4, '0')}`;
@@ -43,8 +43,12 @@ export default function JobPrintPreview() {
     enabled: !!job?.clientId
   });
 
-  const { data: employees = [] } = useQuery<Employee[]>({
-    queryKey: ["/api/employees"]
+  const { data: machines = [] } = useQuery<Machine[]>({
+    queryKey: ["/api/machines"]
+  });
+
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"]
   });
 
   const { data: productCategories = [] } = useQuery<ProductCategory[]>({
@@ -104,20 +108,45 @@ export default function JobPrintPreview() {
   const formattedJobNumber = formatJobNumber(job.jobNumber, job.createdAt);
   const productCategory = productCategories.find(c => c.id === job.productCategoryId);
   
-  const prePressSpecs = job.prePressSpecs as any || {};
-  const printingInfo = job.printingInfo as any || {};
-  const additionalProcess = job.additionalProcess as any || {};
-  const cuttingSlip = job.cuttingSlip as any || {};
-  const customerDelivery = job.customerDelivery as any || {};
+  const prePressSpecs = (job.prePressSpecs as any) || {};
+  const printingInfo = (job.printingInfo as any) || {};
+  const additionalProcess = (job.additionalProcess as any) || {};
+  const cuttingSlip = (job.cuttingSlip as any) || {};
+  const customerDelivery = (job.customerDelivery as any) || {};
   const items = (job.items as any[]) || [];
+  const stageDeadlines = (job.stageDeadlines as StageDeadlines) || {};
+  const machineIds = (job.machineIds as string[]) || [];
 
-  const InfoRow = ({ label, value }: { label: string; value: string | number | null | undefined }) => (
-    value !== null && value !== undefined && value !== '' ? (
-      <div className="grid grid-cols-2 gap-2 py-1 border-b border-gray-100">
-        <span className="font-medium text-sm">{label}:</span>
-        <span className="text-sm">{value}</span>
-      </div>
-    ) : null
+  const selectedMachines = machines.filter(m => machineIds.includes(m.id));
+  const machinesByDept: Record<string, Machine[]> = {};
+  selectedMachines.forEach(machine => {
+    const deptId = machine.departmentId;
+    if (!machinesByDept[deptId]) machinesByDept[deptId] = [];
+    machinesByDept[deptId].push(machine);
+  });
+
+  const formatValue = (value: any): string => {
+    if (value === null || value === undefined || value === '') return '-';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    return String(value);
+  };
+
+  const formatDate = (date: any): string => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '-';
+      return format(d, "dd/MM/yyyy");
+    } catch {
+      return '-';
+    }
+  };
+
+  const InfoRow = ({ label, value }: { label: string; value: any }) => (
+    <div className="grid grid-cols-2 gap-2 py-1 border-b border-gray-200">
+      <span className="font-medium text-sm">{label}:</span>
+      <span className="text-sm">{formatValue(value)}</span>
+    </div>
   );
 
   return (
@@ -135,243 +164,296 @@ export default function JobPrintPreview() {
       </div>
 
       {/* Print Content */}
-      <div className="max-w-4xl mx-auto bg-white print:bg-white">
+      <div className="max-w-4xl mx-auto bg-white print:bg-white text-black">
         {/* Header */}
         <div className="text-center border-b-2 border-black pb-4 mb-6">
           <h1 className="text-2xl font-bold">CAXTON PRINT</h1>
-          <p className="text-sm text-muted-foreground">Job Card / Work Order</p>
+          <p className="text-sm text-gray-600">Job Card / Work Order</p>
           <div className="mt-2 flex justify-center gap-8">
             <span className="font-bold text-lg">{formattedJobNumber}</span>
-            <span className="text-sm">Date: {job.createdAt ? format(new Date(job.createdAt), "dd/MM/yyyy") : 'N/A'}</span>
+            <span className="text-sm">Date: {formatDate(job.createdAt)}</span>
           </div>
         </div>
 
-        {/* Basic Information */}
+        {/* Section 1: Basic Information */}
         <Card className="mb-4 print:shadow-none print:border">
-          <CardHeader className="py-2">
-            <CardTitle className="text-lg">Basic Information</CardTitle>
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">1. Basic Information</CardTitle>
           </CardHeader>
           <CardContent className="py-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <InfoRow label="Job Name" value={job.jobName} />
                 <InfoRow label="Client" value={client?.name} />
                 <InfoRow label="Company" value={client?.company} />
-                <InfoRow label="Job Type" value={job.jobType} />
                 <InfoRow label="Product Category" value={productCategory?.name} />
+                <InfoRow label="Job Name" value={job.jobName} />
               </div>
               <div>
-                <InfoRow label="Quantity" value={job.quantity?.toLocaleString()} />
-                <InfoRow label="Status" value={job.status} />
-                <InfoRow label="Deadline" value={job.deadline ? format(new Date(job.deadline), "dd/MM/yyyy") : undefined} />
-                <InfoRow label="Order Date" value={job.orderDate ? format(new Date(job.orderDate), "dd/MM/yyyy") : undefined} />
-                <InfoRow label="Schedule Date" value={job.scheduleDate ? format(new Date(job.scheduleDate), "dd/MM/yyyy") : undefined} />
+                <InfoRow label="Job Type" value={job.jobType} />
+                <InfoRow label="Order Date" value={formatDate(job.orderDate)} />
+                <InfoRow label="Schedule Date" value={formatDate(job.scheduleDate)} />
+                <InfoRow label="Delivery Deadline" value={formatDate(job.deadline)} />
               </div>
+            </div>
+            <div className="mt-2">
+              <InfoRow label="Job Description" value={job.description} />
             </div>
           </CardContent>
         </Card>
 
-        {/* Specifications */}
+        {/* Section 2: Specifications & Quantity */}
         <Card className="mb-4 print:shadow-none print:border">
-          <CardHeader className="py-2">
-            <CardTitle className="text-lg">Specifications</CardTitle>
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">2. Specifications & Quantity</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <InfoRow label="Quantity" value={job.quantity} />
+                <InfoRow label="Size/Dimensions" value={job.size} />
+                <InfoRow label="CLS" value={job.cls} />
+              </div>
+              <div>
+                <InfoRow label="Colors" value={job.colors} />
+                <InfoRow label="Paper" value={job.paper} />
+                <InfoRow label="Finishing Options" value={job.finishingOptions} />
+              </div>
+              <div>
+                <InfoRow label="Status" value={job.status} />
+              </div>
+            </div>
+            <div className="mt-2">
+              <InfoRow label="Job Specifications (Details)" value={job.jobSpecs} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section 3: Pre-Press Specifications */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">3. Pre-Press Specifications</CardTitle>
           </CardHeader>
           <CardContent className="py-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <InfoRow label="Size" value={job.size} />
-                <InfoRow label="Paper GSM" value={prePressSpecs.paperGsm} />
-                <InfoRow label="Paper Size" value={prePressSpecs.paperSize} />
-                <InfoRow label="Cut Size" value={prePressSpecs.cutSize} />
+                <InfoRow label="Artwork Received" value={prePressSpecs.artworkReceived} />
+                <InfoRow label="Proof Sent" value={prePressSpecs.proofSent} />
+                <InfoRow label="Proof Approved" value={prePressSpecs.proofApproved} />
               </div>
               <div>
-                <InfoRow label="Sheets Count" value={prePressSpecs.sheetsCount} />
-                <InfoRow label="Machine" value={prePressSpecs.machine || printingInfo.machine} />
-                <InfoRow label="Duration ST" value={prePressSpecs.durationST} />
-                <InfoRow label="Duration FT" value={prePressSpecs.durationFT} />
+                <InfoRow label="Plate Making" value={prePressSpecs.plateMaking} />
+              </div>
+            </div>
+            <div className="mt-2">
+              <InfoRow label="Pre-Press Notes" value={prePressSpecs.notes} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section 4: Printing Information */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">4. Printing Information</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <InfoRow label="Machine" value={printingInfo.machine} />
+                <InfoRow label="Forms" value={printingInfo.forms} />
+              </div>
+              <div>
+                <InfoRow label="Ups" value={printingInfo.ups} />
+                <InfoRow label="Print Run" value={printingInfo.printRun} />
+              </div>
+              <div>
+                <InfoRow label="Sheets Required" value={printingInfo.sheetsRequired} />
+              </div>
+            </div>
+            <div className="mt-2">
+              <InfoRow label="Printing Notes" value={printingInfo.notes} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section 5: Additional Process */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">5. Additional Process</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <InfoRow label="Lamination" value={additionalProcess.lamination} />
+                <InfoRow label="UV Coating" value={additionalProcess.uvCoating} />
+              </div>
+              <div>
+                <InfoRow label="Foiling" value={additionalProcess.foiling} />
+                <InfoRow label="Embossing" value={additionalProcess.embossing} />
+              </div>
+              <div>
+                <InfoRow label="Die Cutting" value={additionalProcess.dieCutting} />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Pre-Press */}
-        {Object.keys(prePressSpecs).length > 0 && (
-          <Card className="mb-4 print:shadow-none print:border">
-            <CardHeader className="py-2">
-              <CardTitle className="text-lg">Pre-Press</CardTitle>
-            </CardHeader>
-            <CardContent className="py-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <InfoRow label="Plate Making" value={prePressSpecs.plateMaking} />
-                  <InfoRow label="Positives" value={prePressSpecs.positives} />
-                  <InfoRow label="CTP Plate" value={prePressSpecs.ctpPlate} />
-                </div>
-                <div>
-                  <InfoRow label="Layout Size" value={prePressSpecs.layoutSize} />
-                  <InfoRow label="Layout Ups" value={prePressSpecs.layoutUps} />
-                  <InfoRow label="Party Paper" value={prePressSpecs.partyPaper ? 'Yes' : prePressSpecs.partyPaper === false ? 'No' : undefined} />
-                </div>
+        {/* Section 6: Cutting Slip */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">6. Cutting Slip</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <InfoRow label="Cut Size" value={cuttingSlip.cutSize} />
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Printing */}
-        {Object.keys(printingInfo).length > 0 && (
-          <Card className="mb-4 print:shadow-none print:border">
-            <CardHeader className="py-2">
-              <CardTitle className="text-lg">Printing</CardTitle>
-            </CardHeader>
-            <CardContent className="py-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <InfoRow label="Machine" value={printingInfo.machine} />
-                  <InfoRow label="No. of Impressions" value={printingInfo.noOfImpressions} />
-                  <InfoRow label="Printing Sheets" value={printingInfo.printingSheets} />
-                </div>
-                <div>
-                  <InfoRow label="Press Size" value={printingInfo.pressSize} />
-                  <InfoRow label="Gripper" value={printingInfo.gripper} />
-                  <InfoRow label="Tail" value={printingInfo.tail} />
-                </div>
+              <div>
+                <InfoRow label="Quantity" value={cuttingSlip.quantity} />
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Additional Process */}
-        {Object.keys(additionalProcess).length > 0 && (
-          <Card className="mb-4 print:shadow-none print:border">
-            <CardHeader className="py-2">
-              <CardTitle className="text-lg">Additional Process</CardTitle>
-            </CardHeader>
-            <CardContent className="py-2">
-              <div className="grid grid-cols-3 gap-4">
-                <InfoRow label="Lamination" value={additionalProcess.lamination} />
-                <InfoRow label="Varnish" value={additionalProcess.varnish} />
-                <InfoRow label="UV" value={additionalProcess.uv} />
-                <InfoRow label="Aqueous Coating" value={additionalProcess.aqueousCoating} />
-                <InfoRow label="Embossing" value={additionalProcess.embossing} />
-                <InfoRow label="Foiling" value={additionalProcess.foiling} />
-                <InfoRow label="Die Cutting" value={additionalProcess.dieCutting} />
-                <InfoRow label="Punching" value={additionalProcess.punching} />
-                <InfoRow label="Pasting" value={additionalProcess.pasting} />
-                <InfoRow label="Binding" value={additionalProcess.binding} />
-                <InfoRow label="Numbering" value={additionalProcess.numbering} />
-                <InfoRow label="Perforation" value={additionalProcess.perforation} />
+              <div>
+                <InfoRow label="Sections" value={cuttingSlip.sections} />
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+            <div className="mt-2">
+              <InfoRow label="Cutting Notes" value={cuttingSlip.notes} />
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Cutting Slip */}
-        {Object.keys(cuttingSlip).length > 0 && (
-          <Card className="mb-4 print:shadow-none print:border">
-            <CardHeader className="py-2">
-              <CardTitle className="text-lg">Cutting Slip</CardTitle>
-            </CardHeader>
-            <CardContent className="py-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <InfoRow label="Cutting Size" value={cuttingSlip.cuttingSize} />
-                  <InfoRow label="Cutting Sheets" value={cuttingSlip.cuttingSheets} />
-                </div>
-                <div>
-                  <InfoRow label="Cutting Notes" value={cuttingSlip.cuttingNotes} />
-                </div>
+        {/* Section 7: Customer Delivery */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">7. Customer Delivery</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <InfoRow label="Delivery Address" value={customerDelivery.address} />
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Delivery */}
-        {Object.keys(customerDelivery).length > 0 && (
-          <Card className="mb-4 print:shadow-none print:border">
-            <CardHeader className="py-2">
-              <CardTitle className="text-lg">Delivery Information</CardTitle>
-            </CardHeader>
-            <CardContent className="py-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <InfoRow label="Delivery Mode" value={customerDelivery.deliveryMode} />
-                  <InfoRow label="Delivery Address" value={customerDelivery.deliveryAddress} />
-                </div>
-                <div>
-                  <InfoRow label="Delivery Contact" value={customerDelivery.deliveryContact} />
-                  <InfoRow label="Delivery Notes" value={customerDelivery.deliveryNotes} />
-                </div>
+              <div>
+                <InfoRow label="Delivery Contact" value={customerDelivery.contact} />
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+            <div className="mt-2">
+              <InfoRow label="Delivery Instructions" value={customerDelivery.instructions} />
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Items */}
-        {items.length > 0 && (
-          <Card className="mb-4 print:shadow-none print:border">
-            <CardHeader className="py-2">
-              <CardTitle className="text-lg">Items</CardTitle>
-            </CardHeader>
-            <CardContent className="py-2">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 px-2">#</th>
-                    <th className="text-left py-2 px-2">Description</th>
-                    <th className="text-right py-2 px-2">Quantity</th>
-                    <th className="text-right py-2 px-2">Rate</th>
-                    <th className="text-right py-2 px-2">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item: any, index: number) => (
-                    <tr key={index} className="border-b">
-                      <td className="py-2 px-2">{index + 1}</td>
-                      <td className="py-2 px-2">{item.description || '-'}</td>
-                      <td className="text-right py-2 px-2">{item.quantity || 0}</td>
-                      <td className="text-right py-2 px-2">{item.rate || 0}</td>
-                      <td className="text-right py-2 px-2">{item.amount || 0}</td>
+        {/* Section 8: Items (Line Items) */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">8. Items (Line Items)</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <table className="w-full text-sm border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="text-left py-2 px-2 border border-gray-300">Sr. No.</th>
+                  <th className="text-left py-2 px-2 border border-gray-300">Particulars</th>
+                  <th className="text-right py-2 px-2 border border-gray-300">Qty</th>
+                  <th className="text-center py-2 px-2 border border-gray-300">Unit</th>
+                  <th className="text-right py-2 px-2 border border-gray-300">Rate</th>
+                  <th className="text-right py-2 px-2 border border-gray-300">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.length > 0 ? (
+                  items.map((item: any, index: number) => (
+                    <tr key={index}>
+                      <td className="py-2 px-2 border border-gray-300">{item.srNo || index + 1}</td>
+                      <td className="py-2 px-2 border border-gray-300">{formatValue(item.particulars)}</td>
+                      <td className="text-right py-2 px-2 border border-gray-300">{formatValue(item.quantity)}</td>
+                      <td className="text-center py-2 px-2 border border-gray-300">{formatValue(item.unit)}</td>
+                      <td className="text-right py-2 px-2 border border-gray-300">{formatValue(item.rate)}</td>
+                      <td className="text-right py-2 px-2 border border-gray-300">{formatValue(item.amount)}</td>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="font-bold">
-                    <td colSpan={4} className="text-right py-2 px-2">Total:</td>
-                    <td className="text-right py-2 px-2">
-                      {items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)}
-                    </td>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="py-2 px-2 border border-gray-300">1</td>
+                    <td className="py-2 px-2 border border-gray-300">-</td>
+                    <td className="text-right py-2 px-2 border border-gray-300">-</td>
+                    <td className="text-center py-2 px-2 border border-gray-300">-</td>
+                    <td className="text-right py-2 px-2 border border-gray-300">-</td>
+                    <td className="text-right py-2 px-2 border border-gray-300">-</td>
                   </tr>
-                </tfoot>
-              </table>
-            </CardContent>
-          </Card>
-        )}
+                )}
+              </tbody>
+              <tfoot>
+                <tr className="font-bold bg-gray-50">
+                  <td colSpan={5} className="text-right py-2 px-2 border border-gray-300">Total:</td>
+                  <td className="text-right py-2 px-2 border border-gray-300">
+                    {items.length > 0 
+                      ? items.reduce((sum: number, item: any) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2)
+                      : '-'}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </CardContent>
+        </Card>
 
-        {/* Remarks */}
-        {(job.partyPressRemarks || job.description) && (
-          <Card className="mb-4 print:shadow-none print:border">
-            <CardHeader className="py-2">
-              <CardTitle className="text-lg">Remarks</CardTitle>
-            </CardHeader>
-            <CardContent className="py-2">
-              {job.partyPressRemarks && (
-                <div className="mb-2">
-                  <span className="font-medium">Party Press Remarks:</span>
-                  <p className="text-sm mt-1">{job.partyPressRemarks}</p>
-                </div>
-              )}
-              {job.description && (
-                <div>
-                  <span className="font-medium">Description:</span>
-                  <p className="text-sm mt-1">{job.description}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        {/* Section 9: Machine Selection */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">9. Machine Selection</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <InfoRow 
+              label="Selected Machines" 
+              value={selectedMachines.length > 0 
+                ? Object.entries(machinesByDept).map(([deptId, deptMachines]) => {
+                    const dept = departments.find(d => d.id === deptId);
+                    return `${dept?.name || 'Unknown'}: ${deptMachines.map(m => m.name).join(', ')}`;
+                  }).join(' | ')
+                : null
+              } 
+            />
+          </CardContent>
+        </Card>
+
+        {/* Section 10: PO File */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">10. Purchase Order (PO) File</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <InfoRow label="PO File" value={job.poFileUrl ? 'Attached' : null} />
+            {job.poFileUrl && (
+              <p className="text-xs text-gray-500 mt-1 break-all print:hidden">
+                URL: {job.poFileUrl}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Section 11: Stage Time Allocation */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">11. Stage Time Allocation</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="grid grid-cols-2 gap-4">
+              {TASK_STAGES.map((stage) => (
+                <InfoRow key={stage} label={stage} value={stageDeadlines[stage] ? formatDate(stageDeadlines[stage]) : null} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section 12: Party/Press Remarks */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">12. Party/Press Remarks</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <InfoRow label="Party/Press Remarks" value={job.partyPressRemarks} />
+          </CardContent>
+        </Card>
 
         {/* Footer */}
-        <div className="mt-8 pt-4 border-t text-center text-sm text-muted-foreground print:mt-4">
+        <div className="mt-8 pt-4 border-t text-center text-sm text-gray-500 print:mt-4">
           <p>Generated on {format(new Date(), "dd/MM/yyyy HH:mm")}</p>
         </div>
       </div>
@@ -394,6 +476,9 @@ export default function JobPrintPreview() {
           }
           .print\\:bg-white {
             background-color: white !important;
+          }
+          .print\\:bg-gray-100 {
+            background-color: #f3f4f6 !important;
           }
         }
       `}</style>
