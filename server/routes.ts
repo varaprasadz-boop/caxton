@@ -76,7 +76,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         departmentId: employee.departmentId,
         role: userRole
       });
-    } catch (error) {
+    }); 
+    }catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ error: "Login failed" });
     }
