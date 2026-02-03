@@ -4,9 +4,11 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const session = pgTable('session', {
-  id: text('id').primaryKey(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  id: text('id').primaryKey(),           // renamed from sid
+  sess: text('sess').notNull(),          // keep session data
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(), // renamed from expire
 });
+
 // Clients table
 export const clients = pgTable("clients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
