@@ -3,6 +3,10 @@ import { pgTable, text, varchar, integer, timestamp, boolean, json, serial, uniq
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const session = pgTable('session', {
+  id: text('id').primaryKey(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+});
 // Clients table
 export const clients = pgTable("clients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
