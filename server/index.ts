@@ -24,6 +24,7 @@ app.use(
       "http://localhost:3000",
       "http://localhost:5173",
       "https://caxton-services.onrender.com", // same origin in prod
+      'https://crmcaxton.in'
     ],
     credentials: true,
   })
