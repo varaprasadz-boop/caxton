@@ -35,23 +35,21 @@ const PORT = process.env.PORT || 3000;
 // ✅ Session configuration (with Postgres store)
 app.set("trust proxy", 1); // 👈 required for secure cookies behind Render proxy
 
+
 app.use(
   session({
-    store: new PgSession({
-      conString: process.env.DATABASE_URL, // Neon Postgres
-      createTableIfMissing: true,
-    }),
+    store: new PgSession({ conString: process.env.DATABASE_URL }),
     secret:
-      process.env.SESSION_SECRET ||
-      "caxton-php-secret-key-change-in-production",
+    process.env.SESSION_SECRET ||
+    "caxton-php-secret-key-change-in-production",
     resave: false,
     saveUninitialized: false,
     proxy: true,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // cookies only over https in prod
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // same origin → strict/lax is fine
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
     },
   })
 );
