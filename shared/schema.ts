@@ -4,9 +4,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const session = pgTable('session', {
-  id: text('id').primaryKey(),           // renamed from sid
-  sess: text('sess').notNull(),          // keep session data
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(), // renamed from expire
+  sid: text('sid').primaryKey(),          // keep original column name
+  sess: text('sess').notNull(),
+  expire: timestamp('expire', { withTimezone: true }).notNull(),
 });
 
 // Clients table
