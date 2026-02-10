@@ -178,64 +178,50 @@ export const insertProductCategorySchema = createInsertSchema(productCategories)
 
 // JSON field schemas for job extended data
 export const prePressSpecsSchema = z.object({
-  specialInstructions: z.string().optional(),
-  fileName: z.string().optional(),
-  outputST: z.string().optional(),
-  outputFT: z.string().optional(),
-  paperGsm: z.string().optional(),
-  paperSize: z.string().optional(),
-  sheetsCount: z.string().optional(),
-  cutSize: z.string().optional(),
-  machine: z.string().optional(),
-  durationST: z.string().optional(),
-  durationFT: z.string().optional(),
+  artworkReceived: z.string().optional(),
+  proofSent: z.string().optional(),
+  proofApproved: z.string().optional(),
+  plateMaking: z.string().optional(),
+  notes: z.string().optional(),
 }).optional();
 
 export const printingInfoSchema = z.object({
-  printingSize: z.string().optional(),
-  colors: z.string().optional(),
-  impression: z.string().optional(),
-  coating: z.string().optional(),
-  durationST: z.string().optional(),
-  durationFT: z.string().optional(),
-  wastage: z.string().optional(),
+  machine: z.string().optional(),
+  forms: z.string().optional(),
+  ups: z.string().optional(),
+  printRun: z.string().optional(),
+  sheetsRequired: z.string().optional(),
+  notes: z.string().optional(),
 }).optional();
 
 export const additionalProcessSchema = z.object({
-  coating: z.string().optional(),
-  threading: z.string().optional(),
   lamination: z.string().optional(),
-  iLets: z.string().optional(),
+  uvCoating: z.string().optional(),
   foiling: z.string().optional(),
-  folding: z.string().optional(),
-  spotUv: z.string().optional(),
-  sectionCentre: z.string().optional(),
-  punching: z.string().optional(),
-  perfectBinding: z.string().optional(),
-  pasting: z.string().optional(),
-  centrePinning: z.string().optional(),
+  embossing: z.string().optional(),
+  dieCutting: z.string().optional(),
 }).optional();
 
 export const cuttingSlipSchema = z.object({
-  jobName: z.string().optional(),
-  quantity: z.string().optional(),
-  billNo: z.string().optional(),
   cutSize: z.string().optional(),
-  gsm: z.string().optional(),
-  machine: z.string().optional(),
+  quantity: z.string().optional(),
+  sections: z.string().optional(),
+  notes: z.string().optional(),
 }).optional();
 
 export const customerDeliverySchema = z.object({
-  customer: z.string().optional(),
-  wastage: z.string().optional(),
-  deliveryDate: z.string().optional(),
-  clientDetails: z.string().optional(),
+  address: z.string().optional(),
+  contact: z.string().optional(),
+  instructions: z.string().optional(),
 }).optional();
 
 export const jobItemSchema = z.object({
-  item1: z.string().optional(),
-  item2: z.string().optional(),
-  remarks: z.string().optional(),
+  srNo: z.number().optional(),
+  particulars: z.string().optional(),
+  quantity: z.string().optional(),
+  unit: z.string().optional(),
+  rate: z.string().optional(),
+  amount: z.string().optional(),
 });
 
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, jobNumber: true, createdAt: true }).extend({
