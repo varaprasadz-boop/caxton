@@ -202,9 +202,9 @@ export const additionalProcessSchema = z.object({
 }).optional();
 
 export const cuttingSlipSchema = z.object({
+  paperSize: z.string().optional(),
   cutSize: z.string().optional(),
-  quantity: z.string().optional(),
-  sections: z.string().optional(),
+  issueSheets: z.string().optional(),
   notes: z.string().optional(),
 }).optional();
 

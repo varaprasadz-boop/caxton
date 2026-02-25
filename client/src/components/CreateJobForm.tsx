@@ -649,6 +649,15 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
               <CollapsibleContent className="pt-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
+                    <Label>Paper Size</Label>
+                    <Input
+                      value={(formData.cuttingSlip as any)?.paperSize || ""}
+                      onChange={handleJsonFieldChange('cuttingSlip', 'paperSize')}
+                      placeholder="e.g. A4, 210x297mm"
+                      data-testid="input-cutting-paper-size"
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label>Cut Size</Label>
                     <Input
                       value={(formData.cuttingSlip as any)?.cutSize || ""}
@@ -658,21 +667,12 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Quantity</Label>
+                    <Label>Issue Sheets</Label>
                     <Input
-                      value={(formData.cuttingSlip as any)?.quantity || ""}
-                      onChange={handleJsonFieldChange('cuttingSlip', 'quantity')}
-                      placeholder="Cutting quantity"
-                      data-testid="input-cutting-quantity"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Sections</Label>
-                    <Input
-                      value={(formData.cuttingSlip as any)?.sections || ""}
-                      onChange={handleJsonFieldChange('cuttingSlip', 'sections')}
-                      placeholder="Number of sections"
-                      data-testid="input-cutting-sections"
+                      value={(formData.cuttingSlip as any)?.issueSheets || ""}
+                      onChange={handleJsonFieldChange('cuttingSlip', 'issueSheets')}
+                      placeholder="e.g. 550A"
+                      data-testid="input-cutting-issue-sheets"
                     />
                   </div>
                 </div>

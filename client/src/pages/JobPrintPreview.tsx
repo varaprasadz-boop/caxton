@@ -277,13 +277,13 @@ export default function JobPrintPreview() {
           <CardContent className="py-2">
             <div className="grid grid-cols-3 gap-4">
               <div>
+                <InfoRow label="Paper Size" value={cuttingSlip.paperSize} />
+              </div>
+              <div>
                 <InfoRow label="Cut Size" value={cuttingSlip.cutSize} />
               </div>
               <div>
-                <InfoRow label="Quantity" value={cuttingSlip.quantity} />
-              </div>
-              <div>
-                <InfoRow label="Sections" value={cuttingSlip.sections} />
+                <InfoRow label="Issue Sheets" value={cuttingSlip.issueSheets} />
               </div>
             </div>
             <div className="mt-2">

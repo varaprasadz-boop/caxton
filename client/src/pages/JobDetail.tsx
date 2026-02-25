@@ -292,16 +292,16 @@ export default function JobDetail() {
           <div class="section-content">
             <div class="grid-3">
               <div class="field">
+                <div class="field-label">Paper Size</div>
+                <div class="field-value">${cuttingSlip.paperSize || '-'}</div>
+              </div>
+              <div class="field">
                 <div class="field-label">Cut Size</div>
                 <div class="field-value">${cuttingSlip.cutSize || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">Quantity</div>
-                <div class="field-value">${cuttingSlip.quantity || '-'}</div>
-              </div>
-              <div class="field">
-                <div class="field-label">Sections</div>
-                <div class="field-value">${cuttingSlip.sections || '-'}</div>
+                <div class="field-label">Issue Sheets</div>
+                <div class="field-value">${cuttingSlip.issueSheets || '-'}</div>
               </div>
             </div>
             ${cuttingSlip.notes ? `
@@ -730,16 +730,16 @@ export default function JobDetail() {
               <CollapsibleContent>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
+                    <p className="text-sm font-medium text-muted-foreground">Paper Size</p>
+                    <p className="text-sm">{cuttingSlip.paperSize || '-'}</p>
+                  </div>
+                  <div>
                     <p className="text-sm font-medium text-muted-foreground">Cut Size</p>
                     <p className="text-sm">{cuttingSlip.cutSize || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Quantity</p>
-                    <p className="text-sm">{cuttingSlip.quantity || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Sections</p>
-                    <p className="text-sm">{cuttingSlip.sections || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Issue Sheets</p>
+                    <p className="text-sm">{cuttingSlip.issueSheets || '-'}</p>
                   </div>
                   {cuttingSlip.notes && (
                     <div className="col-span-full">
