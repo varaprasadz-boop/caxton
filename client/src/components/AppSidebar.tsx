@@ -11,7 +11,8 @@ import {
   FileBarChart,
   Cog,
   Shield,
-  Package
+  Package,
+  ClipboardList
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -33,6 +34,7 @@ interface MenuItem {
   url: string;
   icon: any;
   module?: PermissionModule;
+  adminOnly?: boolean;
 }
 
 const menuItems: MenuItem[] = [
@@ -94,6 +96,12 @@ const menuItems: MenuItem[] = [
     icon: FileBarChart,
   },
   {
+    title: "Activity Log",
+    url: "/activity-log",
+    icon: ClipboardList,
+    adminOnly: true,
+  },
+  {
     title: "Settings",
     url: "/settings",
     icon: Settings,
@@ -120,6 +128,11 @@ export default function AppSidebar() {
     // Always show Dashboard
     if (item.url === "/") {
       return true;
+    }
+
+    // Admin-only items
+    if (item.adminOnly) {
+      return currentUser?.role === 'admin';
     }
 
     // Always show Reports and Settings to all authenticated users

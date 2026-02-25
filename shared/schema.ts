@@ -129,6 +129,17 @@ export const tasks = pgTable("tasks", {
   uniqueJobTask: uniqueIndex("unique_job_task_idx").on(table.jobId, table.taskSequence),
 }));
 
+// Job Activity Log table - tracks all edits made to jobs
+export const jobActivityLog = pgTable("job_activity_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull(),
+  jobNumber: integer("job_number"), // Stored for display without join
+  employeeId: varchar("employee_id").notNull(),
+  employeeName: text("employee_name").notNull(),
+  changes: json("changes").notNull(), // Array of { field, label, oldValue, newValue }
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Company Settings table (single row for company information)
 export const companySettings = pgTable("company_settings", {
   id: varchar("id").primaryKey().default("default"), // Single row with ID 'default'
@@ -274,6 +285,9 @@ export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
 export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
 export type CompanySettings = typeof companySettings.$inferSelect;
+
+export type JobActivityLog = typeof jobActivityLog.$inferSelect;
+export type ActivityChange = { field: string; label: string; oldValue: string; newValue: string };
 
 // Job types enum
 export const JOB_TYPES = ["Carton", "Booklet", "Pouch Folder", "Flyers", "Business Cards", "Brochures"] as const;

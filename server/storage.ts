@@ -17,6 +17,8 @@ import {
   type InsertTask,
   type CompanySettings,
   type InsertCompanySettings,
+  type JobActivityLog,
+  type ActivityChange,
   clients,
   departments,
   roles,
@@ -25,10 +27,11 @@ import {
   productCategories,
   jobs,
   tasks,
-  companySettings
+  companySettings,
+  jobActivityLog
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { eq, max } from "drizzle-orm";
+import { eq, max, desc } from "drizzle-orm";
 import { db } from "./db";
 
 // modify the interface with any CRUD methods
@@ -93,6 +96,11 @@ export interface IStorage {
   // Company Settings
   getCompanySettings(): Promise<CompanySettings | undefined>;
   updateCompanySettings(updates: Partial<InsertCompanySettings>): Promise<CompanySettings | undefined>;
+
+  // Activity Log
+  createActivityLog(entry: { jobId: string; jobNumber?: number; employeeId: string; employeeName: string; changes: ActivityChange[] }): Promise<JobActivityLog>;
+  getActivityLogs(): Promise<JobActivityLog[]>;
+  getActivityLogsByJob(jobId: string): Promise<JobActivityLog[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -428,6 +436,18 @@ export class MemStorage implements IStorage {
     };
     return this.companySettings;
   }
+
+  async createActivityLog(_entry: { jobId: string; jobNumber?: number; employeeId: string; employeeName: string; changes: ActivityChange[] }): Promise<JobActivityLog> {
+    throw new Error("Activity log not supported in MemStorage");
+  }
+
+  async getActivityLogs(): Promise<JobActivityLog[]> {
+    return [];
+  }
+
+  async getActivityLogsByJob(_jobId: string): Promise<JobActivityLog[]> {
+    return [];
+  }
 }
 
 // PostgreSQL Storage Implementation
@@ -653,6 +673,28 @@ export class PostgreSQLStorage implements IStorage {
       updatedAt: new Date()
     }).where(eq(companySettings.id, 'default')).returning();
     return result[0] || undefined;
+  }
+
+  // Activity Log
+  async createActivityLog(entry: { jobId: string; jobNumber?: number; employeeId: string; employeeName: string; changes: ActivityChange[] }): Promise<JobActivityLog> {
+    const result = await db.insert(jobActivityLog).values({
+      jobId: entry.jobId,
+      jobNumber: entry.jobNumber,
+      employeeId: entry.employeeId,
+      employeeName: entry.employeeName,
+      changes: entry.changes,
+    }).returning();
+    return result[0];
+  }
+
+  async getActivityLogs(): Promise<JobActivityLog[]> {
+    return await db.select().from(jobActivityLog).orderBy(desc(jobActivityLog.createdAt));
+  }
+
+  async getActivityLogsByJob(jobId: string): Promise<JobActivityLog[]> {
+    return await db.select().from(jobActivityLog)
+      .where(eq(jobActivityLog.jobId, jobId))
+      .orderBy(desc(jobActivityLog.createdAt));
   }
 }
 

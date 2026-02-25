@@ -62,7 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userId = employee.id;
       req.session.userEmail = employee.email;
       req.session.userRole = userRole;
-	
+        
       req.session.save(err => {
         if (err) {
           console.error("Session save error:", err);
@@ -864,21 +864,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (requestData.deadline && typeof requestData.deadline === 'string') {
         requestData.deadline = new Date(requestData.deadline);
       }
+      if (requestData.orderDate && typeof requestData.orderDate === 'string') {
+        requestData.orderDate = new Date(requestData.orderDate);
+      }
+      if (requestData.scheduleDate && typeof requestData.scheduleDate === 'string') {
+        requestData.scheduleDate = new Date(requestData.scheduleDate);
+      }
       
       // Validate request data using partial schema for updates
       const partialJobSchema = insertJobSchema.partial();
       const validatedData = partialJobSchema.parse(requestData);
+
+      // Fetch old job for diff comparison
+      const oldJob = await storage.getJob(req.params.id);
+      if (!oldJob) {
+        return res.status(404).json({ error: "Job not found" });
+      }
       
       const job = await storage.updateJob(req.params.id, validatedData);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
+
+      // Build activity log changes
+      const fieldLabels: Record<string, string> = {
+        jobName: "Job Name",
+        description: "Remarks",
+        quantity: "Quantity",
+        size: "Size/Dimensions",
+        cls: "CLS",
+        colors: "Colors",
+        paper: "Paper",
+        finishingOptions: "Finishing Options",
+        jobSpecs: "Job Specs Remarks",
+        status: "Status",
+        orderDate: "Order Date",
+        scheduleDate: "Schedule Date",
+        deadline: "Delivery Deadline",
+        partyPressRemarks: "Party/Press Remarks",
+        prePressSpecs: "Pre-Press Specifications",
+        printingInfo: "Printing Information",
+        additionalProcess: "Additional Process",
+        cuttingSlip: "Cutting",
+        customerDelivery: "Customer Delivery",
+        items: "Items",
+        machineIds: "Machines",
+      };
+
+      const changes: { field: string; label: string; oldValue: string; newValue: string }[] = [];
+      
+      for (const [field, label] of Object.entries(fieldLabels)) {
+        const oldVal = (oldJob as any)[field];
+        const newVal = (validatedData as any)[field];
+        if (newVal === undefined) continue;
+        
+        const oldStr = oldVal instanceof Date
+          ? oldVal.toISOString().split('T')[0]
+          : oldVal !== null && oldVal !== undefined
+            ? typeof oldVal === 'object' ? JSON.stringify(oldVal) : String(oldVal)
+            : '';
+        const newStr = newVal instanceof Date
+          ? newVal.toISOString().split('T')[0]
+          : newVal !== null && newVal !== undefined
+            ? typeof newVal === 'object' ? JSON.stringify(newVal) : String(newVal)
+            : '';
+        
+        if (oldStr !== newStr) {
+          changes.push({ field, label, oldValue: oldStr, newValue: newStr });
+        }
+      }
+
+      // Log changes if any were made and user is authenticated
+      if (changes.length > 0 && req.session.userId) {
+        try {
+          const employee = await storage.getEmployee(req.session.userId);
+          if (employee) {
+            await storage.createActivityLog({
+              jobId: job.id,
+              jobNumber: job.jobNumber,
+              employeeId: req.session.userId,
+              employeeName: employee.name,
+              changes,
+            });
+          }
+        } catch (logError) {
+          console.error("Failed to log activity:", logError);
+        }
+      }
+
       res.json(job);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid job data", details: error.errors });
       }
       res.status(500).json({ error: "Failed to update job" });
+    }
+  });
+
+  // Activity Log routes (admin only)
+  app.get("/api/activity-log", requireAdmin, async (req, res) => {
+    try {
+      const logs = await storage.getActivityLogs();
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch activity logs" });
+    }
+  });
+
+  app.get("/api/activity-log/job/:jobId", requireAdmin, async (req, res) => {
+    try {
+      const logs = await storage.getActivityLogsByJob(req.params.jobId);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch activity logs" });
     }
   });
 

@@ -56,6 +56,10 @@ Preferred communication style: Simple, everyday language.
 - **Real-time Updates**: Query invalidation for immediate UI updates after state changes
 - **Deadline Tracking**: Date-based alerts and overdue detection with visual indicators
 - **Progress Visualization**: Timeline components showing workflow status and bottlenecks
+- **Job Editing**: Any employee can edit all sections of a job via a tabbed EditJobDialog (Basic Info, Specs, Additional Process, Cutting, Printing, Pre-Press, Delivery)
+- **Edit Shortcut from Tasks**: Each task row has an Edit icon button to jump directly to the job's detail/edit page
+- **Audit Log**: Every PATCH /api/jobs/:id compares old vs new values and logs all changed fields (field name, old value, new value, who, when) to job_activity_log table
+- **Activity Log Page**: `/activity-log` (admin only) shows all job edits with employee name, job number, timestamp, fields changed, and before/after values
 
 ### Product Categories (Admin-Only)
 - **Purpose**: Categorize jobs by product type (Carton, Box, Labels, etc.)

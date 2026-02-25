@@ -22,6 +22,7 @@ import ProductCategories from "@/pages/ProductCategories";
 import Roles from "@/pages/Roles";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import ActivityLog from "@/pages/ActivityLog";
 import Login from "@/pages/Login";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/roles" component={Roles} />
       <Route path="/reports" component={Reports} />
       <Route path="/settings" component={Settings} />
+      <Route path="/activity-log" component={ActivityLog} />
       <Route component={NotFound} />
     </Switch>
   );

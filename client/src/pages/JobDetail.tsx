@@ -6,8 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ArrowLeft, Edit, Download, Share, FileText, Calendar, Package, User, Palette, Scissors, Cog, Printer, ChevronDown } from "lucide-react";
 import JobTimelineVisualization from "@/components/JobTimelineVisualization";
-import JobForm from "@/components/JobForm";
 import Modal from "@/components/Modal";
+import EditJobDialog from "@/components/EditJobDialog";
 import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -945,28 +945,14 @@ export default function JobDetail() {
         </div>
       </Modal>
 
-      {/* Edit Job Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Edit Job"
-      >
-        <div className="p-6">
-          {job && (
-            <JobForm
-              job={job}
-              onSuccess={() => {
-                setIsEditModalOpen(false);
-                toast({
-                  title: "Job updated",
-                  description: "Job has been updated successfully.",
-                });
-              }}
-              onCancel={() => setIsEditModalOpen(false)}
-            />
-          )}
-        </div>
-      </Modal>
+      {/* Edit Job Dialog */}
+      {job && (
+        <EditJobDialog
+          job={job}
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+        />
+      )}
     </div>
   );
 }

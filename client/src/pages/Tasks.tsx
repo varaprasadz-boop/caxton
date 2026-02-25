@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Calendar, User, Clock, Download } from "lucide-react";
+import { Search, Calendar, User, Clock, Download, Edit } from "lucide-react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Task, Employee, Job, Client, Department } from "@shared/schema";
 import { format } from "date-fns";
@@ -76,6 +77,7 @@ const statusColors = {
 } as const;
 
 export default function Tasks() {
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [stageFilter, setStageFilter] = useState("all");
@@ -279,7 +281,7 @@ export default function Tasks() {
               <TableHead>Assigned To</TableHead>
               <TableHead>Deadline</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[160px]">Actions</TableHead>
+              <TableHead className="w-[200px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -337,21 +339,32 @@ export default function Tasks() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value={task.status}
-                      onValueChange={(value) => handleUpdateStatus(task.id, value)}
-                      disabled={updateStatusMutation.isPending || task.status === "in-queue"}
-                    >
-                      <SelectTrigger className="w-40" data-testid={`select-status-${task.id}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="delayed">Delayed</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={task.status}
+                        onValueChange={(value) => handleUpdateStatus(task.id, value)}
+                        disabled={updateStatusMutation.isPending || task.status === "in-queue"}
+                      >
+                        <SelectTrigger className="w-32" data-testid={`select-status-${task.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="in-progress">In Progress</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="delayed">Delayed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setLocation(`/jobs/${task.jobId}`)}
+                        title="Edit Job"
+                        data-testid={`button-edit-job-${task.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
