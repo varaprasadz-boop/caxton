@@ -695,7 +695,7 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
             <div className="border rounded-lg p-4">
               <SectionHeader title="Printing Information" section="printing" />
               <CollapsibleContent className="pt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <Label>Machine</Label>
                     <Input
@@ -706,41 +706,30 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Forms</Label>
+                    <Label>Issued Sheets</Label>
                     <Input
-                      value={(formData.printingInfo as any)?.forms || ""}
-                      onChange={handleJsonFieldChange('printingInfo', 'forms')}
-                      placeholder="Number of forms"
-                      data-testid="input-printing-forms"
+                      value={(formData.printingInfo as any)?.issuedSheets || ""}
+                      onChange={handleJsonFieldChange('printingInfo', 'issuedSheets')}
+                      placeholder="e.g. 550A"
+                      data-testid="input-printing-issued-sheets"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Ups</Label>
+                    <Label>Printed Sheets</Label>
                     <Input
-                      value={(formData.printingInfo as any)?.ups || ""}
-                      onChange={handleJsonFieldChange('printingInfo', 'ups')}
-                      placeholder="Ups per sheet"
-                      data-testid="input-printing-ups"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Print Run</Label>
-                    <Input
-                      value={(formData.printingInfo as any)?.printRun || ""}
-                      onChange={handleJsonFieldChange('printingInfo', 'printRun')}
-                      placeholder="Print run quantity"
-                      data-testid="input-printing-run"
+                      value={(formData.printingInfo as any)?.printedSheets || ""}
+                      onChange={handleJsonFieldChange('printingInfo', 'printedSheets')}
+                      placeholder="e.g. 520B"
+                      data-testid="input-printing-printed-sheets"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Sheets Required</Label>
+                    <Label>Wastage</Label>
                     <Input
-                      value={(formData.printingInfo as any)?.sheetsRequired || ""}
-                      onChange={handleJsonFieldChange('printingInfo', 'sheetsRequired')}
-                      placeholder="Number of sheets"
-                      data-testid="input-printing-sheets"
+                      value={(formData.printingInfo as any)?.wastage || ""}
+                      onChange={handleJsonFieldChange('printingInfo', 'wastage')}
+                      placeholder="e.g. 30"
+                      data-testid="input-printing-wastage"
                     />
                   </div>
                 </div>

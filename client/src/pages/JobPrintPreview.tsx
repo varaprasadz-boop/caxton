@@ -275,21 +275,22 @@ export default function JobPrintPreview() {
             <CardTitle className="text-lg">4. Printing Information</CardTitle>
           </CardHeader>
           <CardContent className="py-2">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <InfoRow label="Machine" value={printingInfo.machine} />
-                <InfoRow label="Forms" value={printingInfo.forms} />
               </div>
               <div>
-                <InfoRow label="Ups" value={printingInfo.ups} />
-                <InfoRow label="Print Run" value={printingInfo.printRun} />
+                <InfoRow label="Issued Sheets" value={printingInfo.issuedSheets} />
               </div>
               <div>
-                <InfoRow label="Sheets Required" value={printingInfo.sheetsRequired} />
+                <InfoRow label="Printed Sheets" value={printingInfo.printedSheets} />
+              </div>
+              <div>
+                <InfoRow label="Wastage" value={printingInfo.wastage} />
               </div>
             </div>
             <div className="mt-2">
-              <InfoRow label="Printing Notes" value={printingInfo.notes} />
+              <InfoRow label="Remarks" value={printingInfo.notes} />
             </div>
           </CardContent>
         </Card>

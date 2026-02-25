@@ -298,25 +298,21 @@ export default function JobDetail() {
                 <div class="field-value">${printingInfo.machine || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">Forms</div>
-                <div class="field-value">${printingInfo.forms || '-'}</div>
+                <div class="field-label">Issued Sheets</div>
+                <div class="field-value">${printingInfo.issuedSheets || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">Ups</div>
-                <div class="field-value">${printingInfo.ups || '-'}</div>
+                <div class="field-label">Printed Sheets</div>
+                <div class="field-value">${printingInfo.printedSheets || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">Print Run</div>
-                <div class="field-value">${printingInfo.printRun || '-'}</div>
-              </div>
-              <div class="field">
-                <div class="field-label">Sheets Required</div>
-                <div class="field-value">${printingInfo.sheetsRequired || '-'}</div>
+                <div class="field-label">Wastage</div>
+                <div class="field-value">${printingInfo.wastage || '-'}</div>
               </div>
             </div>
             ${printingInfo.notes ? `
             <div class="field" style="margin-top: 10px;">
-              <div class="field-label">Notes</div>
+              <div class="field-label">Remarks</div>
               <div class="field-value">${printingInfo.notes}</div>
             </div>
             ` : ''}
@@ -740,24 +736,20 @@ export default function JobDetail() {
                     <p className="text-sm">{printingInfo.machine || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Forms</p>
-                    <p className="text-sm">{printingInfo.forms || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Issued Sheets</p>
+                    <p className="text-sm">{printingInfo.issuedSheets || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Ups</p>
-                    <p className="text-sm">{printingInfo.ups || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Printed Sheets</p>
+                    <p className="text-sm">{printingInfo.printedSheets || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Print Run</p>
-                    <p className="text-sm">{printingInfo.printRun || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Sheets Required</p>
-                    <p className="text-sm">{printingInfo.sheetsRequired || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Wastage</p>
+                    <p className="text-sm">{printingInfo.wastage || '-'}</p>
                   </div>
                   {printingInfo.notes && (
                     <div className="col-span-full">
-                      <p className="text-sm font-medium text-muted-foreground">Notes</p>
+                      <p className="text-sm font-medium text-muted-foreground">Remarks</p>
                       <p className="text-sm">{printingInfo.notes}</p>
                     </div>
                   )}

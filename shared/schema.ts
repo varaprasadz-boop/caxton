@@ -187,10 +187,9 @@ export const prePressSpecsSchema = z.object({
 
 export const printingInfoSchema = z.object({
   machine: z.string().optional(),
-  forms: z.string().optional(),
-  ups: z.string().optional(),
-  printRun: z.string().optional(),
-  sheetsRequired: z.string().optional(),
+  issuedSheets: z.string().optional(),
+  printedSheets: z.string().optional(),
+  wastage: z.string().optional(),
   notes: z.string().optional(),
 }).optional();
 
