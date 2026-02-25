@@ -475,7 +475,7 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Job Description</Label>
+                  <Label htmlFor="description">Remarks</Label>
                   <Textarea
                     id="description"
                     value={formData.description || ""}
@@ -570,7 +570,7 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="jobSpecs">Job Specifications (Details)</Label>
+                  <Label htmlFor="jobSpecs">Remarks</Label>
                   <Textarea
                     id="jobSpecs"
                     value={formData.jobSpecs || ""}
@@ -578,131 +578,6 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                     placeholder="Detailed job specifications..."
                     rows={2}
                     data-testid="textarea-job-specs"
-                  />
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
-
-          {/* Pre-Press Section */}
-          <Collapsible open={openSections.prePress}>
-            <div className="border rounded-lg p-4">
-              <SectionHeader title="Pre-Press Specifications" section="prePress" />
-              <CollapsibleContent className="pt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Artwork Received</Label>
-                    <Input
-                      value={(formData.prePressSpecs as any)?.artworkReceived || ""}
-                      onChange={handleJsonFieldChange('prePressSpecs', 'artworkReceived')}
-                      placeholder="Date or status"
-                      data-testid="input-prepress-artwork"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Proof Sent</Label>
-                    <Input
-                      value={(formData.prePressSpecs as any)?.proofSent || ""}
-                      onChange={handleJsonFieldChange('prePressSpecs', 'proofSent')}
-                      placeholder="Date or status"
-                      data-testid="input-prepress-proof"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Proof Approved</Label>
-                    <Input
-                      value={(formData.prePressSpecs as any)?.proofApproved || ""}
-                      onChange={handleJsonFieldChange('prePressSpecs', 'proofApproved')}
-                      placeholder="Date or status"
-                      data-testid="input-prepress-approved"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Plate Making</Label>
-                    <Input
-                      value={(formData.prePressSpecs as any)?.plateMaking || ""}
-                      onChange={handleJsonFieldChange('prePressSpecs', 'plateMaking')}
-                      placeholder="Plate specifications"
-                      data-testid="input-prepress-plate"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Pre-Press Notes</Label>
-                  <Textarea
-                    value={(formData.prePressSpecs as any)?.notes || ""}
-                    onChange={handleJsonFieldChange('prePressSpecs', 'notes')}
-                    placeholder="Additional pre-press notes..."
-                    rows={2}
-                    data-testid="textarea-prepress-notes"
-                  />
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
-
-          {/* Printing Section */}
-          <Collapsible open={openSections.printing}>
-            <div className="border rounded-lg p-4">
-              <SectionHeader title="Printing Information" section="printing" />
-              <CollapsibleContent className="pt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Machine</Label>
-                    <Input
-                      value={(formData.printingInfo as any)?.machine || ""}
-                      onChange={handleJsonFieldChange('printingInfo', 'machine')}
-                      placeholder="Printing machine"
-                      data-testid="input-printing-machine"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Forms</Label>
-                    <Input
-                      value={(formData.printingInfo as any)?.forms || ""}
-                      onChange={handleJsonFieldChange('printingInfo', 'forms')}
-                      placeholder="Number of forms"
-                      data-testid="input-printing-forms"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ups</Label>
-                    <Input
-                      value={(formData.printingInfo as any)?.ups || ""}
-                      onChange={handleJsonFieldChange('printingInfo', 'ups')}
-                      placeholder="Ups per sheet"
-                      data-testid="input-printing-ups"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Print Run</Label>
-                    <Input
-                      value={(formData.printingInfo as any)?.printRun || ""}
-                      onChange={handleJsonFieldChange('printingInfo', 'printRun')}
-                      placeholder="Print run quantity"
-                      data-testid="input-printing-run"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Sheets Required</Label>
-                    <Input
-                      value={(formData.printingInfo as any)?.sheetsRequired || ""}
-                      onChange={handleJsonFieldChange('printingInfo', 'sheetsRequired')}
-                      placeholder="Number of sheets"
-                      data-testid="input-printing-sheets"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Printing Notes</Label>
-                  <Textarea
-                    value={(formData.printingInfo as any)?.notes || ""}
-                    onChange={handleJsonFieldChange('printingInfo', 'notes')}
-                    placeholder="Additional printing notes..."
-                    rows={2}
-                    data-testid="textarea-printing-notes"
                   />
                 </div>
               </CollapsibleContent>
@@ -767,10 +642,10 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
             </div>
           </Collapsible>
 
-          {/* Cutting Slip Section */}
+          {/* Cutting Section */}
           <Collapsible open={openSections.cuttingSlip}>
             <div className="border rounded-lg p-4">
-              <SectionHeader title="Cutting Slip" section="cuttingSlip" />
+              <SectionHeader title="Cutting" section="cuttingSlip" />
               <CollapsibleContent className="pt-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
@@ -802,13 +677,138 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Cutting Notes</Label>
+                  <Label>Remarks</Label>
                   <Textarea
                     value={(formData.cuttingSlip as any)?.notes || ""}
                     onChange={handleJsonFieldChange('cuttingSlip', 'notes')}
                     placeholder="Additional cutting instructions..."
                     rows={2}
                     data-testid="textarea-cutting-notes"
+                  />
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+
+          {/* Printing Section */}
+          <Collapsible open={openSections.printing}>
+            <div className="border rounded-lg p-4">
+              <SectionHeader title="Printing Information" section="printing" />
+              <CollapsibleContent className="pt-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Machine</Label>
+                    <Input
+                      value={(formData.printingInfo as any)?.machine || ""}
+                      onChange={handleJsonFieldChange('printingInfo', 'machine')}
+                      placeholder="Printing machine"
+                      data-testid="input-printing-machine"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Forms</Label>
+                    <Input
+                      value={(formData.printingInfo as any)?.forms || ""}
+                      onChange={handleJsonFieldChange('printingInfo', 'forms')}
+                      placeholder="Number of forms"
+                      data-testid="input-printing-forms"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ups</Label>
+                    <Input
+                      value={(formData.printingInfo as any)?.ups || ""}
+                      onChange={handleJsonFieldChange('printingInfo', 'ups')}
+                      placeholder="Ups per sheet"
+                      data-testid="input-printing-ups"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Print Run</Label>
+                    <Input
+                      value={(formData.printingInfo as any)?.printRun || ""}
+                      onChange={handleJsonFieldChange('printingInfo', 'printRun')}
+                      placeholder="Print run quantity"
+                      data-testid="input-printing-run"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sheets Required</Label>
+                    <Input
+                      value={(formData.printingInfo as any)?.sheetsRequired || ""}
+                      onChange={handleJsonFieldChange('printingInfo', 'sheetsRequired')}
+                      placeholder="Number of sheets"
+                      data-testid="input-printing-sheets"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Remarks</Label>
+                  <Textarea
+                    value={(formData.printingInfo as any)?.notes || ""}
+                    onChange={handleJsonFieldChange('printingInfo', 'notes')}
+                    placeholder="Additional printing notes..."
+                    rows={2}
+                    data-testid="textarea-printing-notes"
+                  />
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+
+          {/* Pre-Press Section */}
+          <Collapsible open={openSections.prePress}>
+            <div className="border rounded-lg p-4">
+              <SectionHeader title="Pre-Press Specifications" section="prePress" />
+              <CollapsibleContent className="pt-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Artwork Received</Label>
+                    <Input
+                      value={(formData.prePressSpecs as any)?.artworkReceived || ""}
+                      onChange={handleJsonFieldChange('prePressSpecs', 'artworkReceived')}
+                      placeholder="Date or status"
+                      data-testid="input-prepress-artwork"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Proof Sent</Label>
+                    <Input
+                      value={(formData.prePressSpecs as any)?.proofSent || ""}
+                      onChange={handleJsonFieldChange('prePressSpecs', 'proofSent')}
+                      placeholder="Date or status"
+                      data-testid="input-prepress-proof"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Proof Approved</Label>
+                    <Input
+                      value={(formData.prePressSpecs as any)?.proofApproved || ""}
+                      onChange={handleJsonFieldChange('prePressSpecs', 'proofApproved')}
+                      placeholder="Date or status"
+                      data-testid="input-prepress-approved"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Plate Making</Label>
+                    <Input
+                      value={(formData.prePressSpecs as any)?.plateMaking || ""}
+                      onChange={handleJsonFieldChange('prePressSpecs', 'plateMaking')}
+                      placeholder="Plate specifications"
+                      data-testid="input-prepress-plate"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Pre-Press Notes</Label>
+                  <Textarea
+                    value={(formData.prePressSpecs as any)?.notes || ""}
+                    onChange={handleJsonFieldChange('prePressSpecs', 'notes')}
+                    placeholder="Additional pre-press notes..."
+                    rows={2}
+                    data-testid="textarea-prepress-notes"
                   />
                 </div>
               </CollapsibleContent>
