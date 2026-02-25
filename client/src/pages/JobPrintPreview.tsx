@@ -247,32 +247,55 @@ export default function JobPrintPreview() {
           </CardContent>
         </Card>
 
-        {/* Section 3: Pre-Press Specifications */}
+        {/* Section 3: Additional Process */}
         <Card className="mb-4 print:shadow-none print:border">
           <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">3. Pre-Press Specifications</CardTitle>
+            <CardTitle className="text-lg">3. Additional Process</CardTitle>
           </CardHeader>
           <CardContent className="py-2">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <InfoRow label="Artwork Received" value={prePressSpecs.artworkReceived} />
-                <InfoRow label="Proof Sent" value={prePressSpecs.proofSent} />
-                <InfoRow label="Proof Approved" value={prePressSpecs.proofApproved} />
+                <InfoRow label="Lamination" value={additionalProcess.lamination} />
+                <InfoRow label="UV Coating" value={additionalProcess.uvCoating} />
               </div>
               <div>
-                <InfoRow label="Plate Making" value={prePressSpecs.plateMaking} />
+                <InfoRow label="Foiling" value={additionalProcess.foiling} />
+                <InfoRow label="Embossing" value={additionalProcess.embossing} />
               </div>
-            </div>
-            <div className="mt-2">
-              <InfoRow label="Pre-Press Notes" value={prePressSpecs.notes} />
+              <div>
+                <InfoRow label="Die Cutting" value={additionalProcess.dieCutting} />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Section 4: Printing Information */}
+        {/* Section 4: Cutting */}
         <Card className="mb-4 print:shadow-none print:border">
           <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">4. Printing Information</CardTitle>
+            <CardTitle className="text-lg">4. Cutting</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <InfoRow label="Cut Size" value={cuttingSlip.cutSize} />
+              </div>
+              <div>
+                <InfoRow label="Quantity" value={cuttingSlip.quantity} />
+              </div>
+              <div>
+                <InfoRow label="Sections" value={cuttingSlip.sections} />
+              </div>
+            </div>
+            <div className="mt-2">
+              <InfoRow label="Remarks" value={cuttingSlip.notes} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section 5: Printing Information */}
+        <Card className="mb-4 print:shadow-none print:border">
+          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-lg">5. Printing Information</CardTitle>
           </CardHeader>
           <CardContent className="py-2">
             <div className="grid grid-cols-4 gap-4">
@@ -295,47 +318,24 @@ export default function JobPrintPreview() {
           </CardContent>
         </Card>
 
-        {/* Section 5: Additional Process */}
+        {/* Section 6: Pre-Press Specifications */}
         <Card className="mb-4 print:shadow-none print:border">
           <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">5. Additional Process</CardTitle>
+            <CardTitle className="text-lg">6. Pre-Press Specifications</CardTitle>
           </CardHeader>
           <CardContent className="py-2">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <InfoRow label="Lamination" value={additionalProcess.lamination} />
-                <InfoRow label="UV Coating" value={additionalProcess.uvCoating} />
+                <InfoRow label="Artwork Received" value={prePressSpecs.artworkReceived} />
+                <InfoRow label="Proof Sent" value={prePressSpecs.proofSent} />
+                <InfoRow label="Proof Approved" value={prePressSpecs.proofApproved} />
               </div>
               <div>
-                <InfoRow label="Foiling" value={additionalProcess.foiling} />
-                <InfoRow label="Embossing" value={additionalProcess.embossing} />
-              </div>
-              <div>
-                <InfoRow label="Die Cutting" value={additionalProcess.dieCutting} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Section 6: Cutting Slip */}
-        <Card className="mb-4 print:shadow-none print:border">
-          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">6. Cutting Slip</CardTitle>
-          </CardHeader>
-          <CardContent className="py-2">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <InfoRow label="Cut Size" value={cuttingSlip.cutSize} />
-              </div>
-              <div>
-                <InfoRow label="Quantity" value={cuttingSlip.quantity} />
-              </div>
-              <div>
-                <InfoRow label="Sections" value={cuttingSlip.sections} />
+                <InfoRow label="Plate Making" value={prePressSpecs.plateMaking} />
               </div>
             </div>
             <div className="mt-2">
-              <InfoRow label="Cutting Notes" value={cuttingSlip.notes} />
+              <InfoRow label="Pre-Press Notes" value={prePressSpecs.notes} />
             </div>
           </CardContent>
         </Card>

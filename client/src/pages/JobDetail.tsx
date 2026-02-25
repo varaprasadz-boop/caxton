@@ -260,30 +260,54 @@ export default function JobDetail() {
         </div>
 
         <div class="section">
-          <div class="section-header">Pre-Press</div>
+          <div class="section-header">Additional Process</div>
           <div class="section-content">
-            <div class="grid">
+            <div class="grid-3">
               <div class="field">
-                <div class="field-label">Artwork Received</div>
-                <div class="field-value">${prePressSpecs.artworkReceived || '-'}</div>
+                <div class="field-label">Lamination</div>
+                <div class="field-value">${additionalProcess.lamination || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">Proof Sent</div>
-                <div class="field-value">${prePressSpecs.proofSent || '-'}</div>
+                <div class="field-label">UV Coating</div>
+                <div class="field-value">${additionalProcess.uvCoating || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">Proof Approved</div>
-                <div class="field-value">${prePressSpecs.proofApproved || '-'}</div>
+                <div class="field-label">Foiling</div>
+                <div class="field-value">${additionalProcess.foiling || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">Plate Making</div>
-                <div class="field-value">${prePressSpecs.plateMaking || '-'}</div>
+                <div class="field-label">Embossing</div>
+                <div class="field-value">${additionalProcess.embossing || '-'}</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Die Cutting</div>
+                <div class="field-value">${additionalProcess.dieCutting || '-'}</div>
               </div>
             </div>
-            ${prePressSpecs.notes ? `
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">Cutting</div>
+          <div class="section-content">
+            <div class="grid-3">
+              <div class="field">
+                <div class="field-label">Cut Size</div>
+                <div class="field-value">${cuttingSlip.cutSize || '-'}</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Quantity</div>
+                <div class="field-value">${cuttingSlip.quantity || '-'}</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Sections</div>
+                <div class="field-value">${cuttingSlip.sections || '-'}</div>
+              </div>
+            </div>
+            ${cuttingSlip.notes ? `
             <div class="field" style="margin-top: 10px;">
-              <div class="field-label">Notes</div>
-              <div class="field-value">${prePressSpecs.notes}</div>
+              <div class="field-label">Remarks</div>
+              <div class="field-value">${cuttingSlip.notes}</div>
             </div>
             ` : ''}
           </div>
@@ -320,54 +344,30 @@ export default function JobDetail() {
         </div>
 
         <div class="section">
-          <div class="section-header">Additional Process</div>
+          <div class="section-header">Pre-Press</div>
           <div class="section-content">
-            <div class="grid-3">
+            <div class="grid">
               <div class="field">
-                <div class="field-label">Lamination</div>
-                <div class="field-value">${additionalProcess.lamination || '-'}</div>
+                <div class="field-label">Artwork Received</div>
+                <div class="field-value">${prePressSpecs.artworkReceived || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">UV Coating</div>
-                <div class="field-value">${additionalProcess.uvCoating || '-'}</div>
+                <div class="field-label">Proof Sent</div>
+                <div class="field-value">${prePressSpecs.proofSent || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">Foiling</div>
-                <div class="field-value">${additionalProcess.foiling || '-'}</div>
+                <div class="field-label">Proof Approved</div>
+                <div class="field-value">${prePressSpecs.proofApproved || '-'}</div>
               </div>
               <div class="field">
-                <div class="field-label">Embossing</div>
-                <div class="field-value">${additionalProcess.embossing || '-'}</div>
-              </div>
-              <div class="field">
-                <div class="field-label">Die Cutting</div>
-                <div class="field-value">${additionalProcess.dieCutting || '-'}</div>
+                <div class="field-label">Plate Making</div>
+                <div class="field-value">${prePressSpecs.plateMaking || '-'}</div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">Cutting Slip</div>
-          <div class="section-content">
-            <div class="grid-3">
-              <div class="field">
-                <div class="field-label">Cut Size</div>
-                <div class="field-value">${cuttingSlip.cutSize || '-'}</div>
-              </div>
-              <div class="field">
-                <div class="field-label">Quantity</div>
-                <div class="field-value">${cuttingSlip.quantity || '-'}</div>
-              </div>
-              <div class="field">
-                <div class="field-label">Sections</div>
-                <div class="field-value">${cuttingSlip.sections || '-'}</div>
-              </div>
-            </div>
-            ${cuttingSlip.notes ? `
+            ${prePressSpecs.notes ? `
             <div class="field" style="margin-top: 10px;">
               <div class="field-label">Notes</div>
-              <div class="field-value">${cuttingSlip.notes}</div>
+              <div class="field-value">${prePressSpecs.notes}</div>
             </div>
             ` : ''}
           </div>
@@ -688,34 +688,63 @@ export default function JobDetail() {
             </Card>
           </Collapsible>
 
-          {/* Pre-Press */}
-          <Collapsible open={openSections.prePress}>
+          {/* Additional Process */}
+          <Collapsible open={openSections.additionalProcess}>
             <Card>
               <CardHeader className="pb-2">
-                <SectionHeader title="Pre-Press Specifications" section="prePress" />
+                <SectionHeader title="Additional Process" section="additionalProcess" />
               </CardHeader>
               <CollapsibleContent>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Artwork Received</p>
-                    <p className="text-sm">{prePressSpecs.artworkReceived || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Lamination</p>
+                    <p className="text-sm">{additionalProcess.lamination || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Proof Sent</p>
-                    <p className="text-sm">{prePressSpecs.proofSent || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">UV Coating</p>
+                    <p className="text-sm">{additionalProcess.uvCoating || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Proof Approved</p>
-                    <p className="text-sm">{prePressSpecs.proofApproved || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Foiling</p>
+                    <p className="text-sm">{additionalProcess.foiling || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Plate Making</p>
-                    <p className="text-sm">{prePressSpecs.plateMaking || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Embossing</p>
+                    <p className="text-sm">{additionalProcess.embossing || '-'}</p>
                   </div>
-                  {prePressSpecs.notes && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Die Cutting</p>
+                    <p className="text-sm">{additionalProcess.dieCutting || '-'}</p>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Cutting */}
+          <Collapsible open={openSections.cutting}>
+            <Card>
+              <CardHeader className="pb-2">
+                <SectionHeader title="Cutting" section="cutting" />
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Cut Size</p>
+                    <p className="text-sm">{cuttingSlip.cutSize || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Quantity</p>
+                    <p className="text-sm">{cuttingSlip.quantity || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Sections</p>
+                    <p className="text-sm">{cuttingSlip.sections || '-'}</p>
+                  </div>
+                  {cuttingSlip.notes && (
                     <div className="col-span-full">
-                      <p className="text-sm font-medium text-muted-foreground">Notes</p>
-                      <p className="text-sm">{prePressSpecs.notes}</p>
+                      <p className="text-sm font-medium text-muted-foreground">Remarks</p>
+                      <p className="text-sm">{cuttingSlip.notes}</p>
                     </div>
                   )}
                 </CardContent>
@@ -758,63 +787,34 @@ export default function JobDetail() {
             </Card>
           </Collapsible>
 
-          {/* Additional Process */}
-          <Collapsible open={openSections.additionalProcess}>
+          {/* Pre-Press */}
+          <Collapsible open={openSections.prePress}>
             <Card>
               <CardHeader className="pb-2">
-                <SectionHeader title="Additional Process" section="additionalProcess" />
+                <SectionHeader title="Pre-Press Specifications" section="prePress" />
               </CardHeader>
               <CollapsibleContent>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Lamination</p>
-                    <p className="text-sm">{additionalProcess.lamination || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Artwork Received</p>
+                    <p className="text-sm">{prePressSpecs.artworkReceived || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">UV Coating</p>
-                    <p className="text-sm">{additionalProcess.uvCoating || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Proof Sent</p>
+                    <p className="text-sm">{prePressSpecs.proofSent || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Foiling</p>
-                    <p className="text-sm">{additionalProcess.foiling || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Proof Approved</p>
+                    <p className="text-sm">{prePressSpecs.proofApproved || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Embossing</p>
-                    <p className="text-sm">{additionalProcess.embossing || '-'}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Plate Making</p>
+                    <p className="text-sm">{prePressSpecs.plateMaking || '-'}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Die Cutting</p>
-                    <p className="text-sm">{additionalProcess.dieCutting || '-'}</p>
-                  </div>
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-
-          {/* Cutting Slip */}
-          <Collapsible open={openSections.cutting}>
-            <Card>
-              <CardHeader className="pb-2">
-                <SectionHeader title="Cutting Slip" section="cutting" />
-              </CardHeader>
-              <CollapsibleContent>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Cut Size</p>
-                    <p className="text-sm">{cuttingSlip.cutSize || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Quantity</p>
-                    <p className="text-sm">{cuttingSlip.quantity || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Sections</p>
-                    <p className="text-sm">{cuttingSlip.sections || '-'}</p>
-                  </div>
-                  {cuttingSlip.notes && (
+                  {prePressSpecs.notes && (
                     <div className="col-span-full">
                       <p className="text-sm font-medium text-muted-foreground">Notes</p>
-                      <p className="text-sm">{cuttingSlip.notes}</p>
+                      <p className="text-sm">{prePressSpecs.notes}</p>
                     </div>
                   )}
                 </CardContent>
