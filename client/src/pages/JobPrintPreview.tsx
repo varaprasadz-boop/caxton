@@ -75,7 +75,7 @@ export default function JobPrintPreview() {
   }
 
   if (isError) {
-    const errorMessage = error?.message?.includes('not found') 
+    const errorMessage = error?.message?.includes('not found')
       ? "The requested job could not be found."
       : "An error occurred while loading the job. Please try again.";
     return (
@@ -107,7 +107,7 @@ export default function JobPrintPreview() {
 
   const formattedJobNumber = formatJobNumber(job.jobNumber, job.createdAt);
   const productCategory = productCategories.find(c => c.id === job.productCategoryId);
-  
+
   const prePressSpecs = (job.prePressSpecs as any) || {};
   const printingInfo = (job.printingInfo as any) || {};
   const additionalProcess = (job.additionalProcess as any) || {};
@@ -143,16 +143,16 @@ export default function JobPrintPreview() {
   };
 
   const InfoRow = ({ label, value }: { label: string; value: any }) => (
-    <div className="grid grid-cols-2 gap-2 py-1 border-b border-gray-200">
-      <span className="font-medium text-sm">{label}:</span>
-      <span className="text-sm">{formatValue(value)}</span>
+    <div className="grid grid-cols-2 gap-1 py-0.5 border-b border-gray-200">
+      <span className="font-medium text-xs">{label}:</span>
+      <span className="text-xs">{formatValue(value)}</span>
     </div>
   );
 
   return (
-    <div className="flex-1 p-6">
+    <div className="flex-1 p-4 print:p-0 print:m-0">
       {/* Action Buttons - Hidden when printing */}
-      <div className="flex items-center justify-between mb-6 print:hidden">
+      <div className="flex items-center justify-between mb-4 print:hidden">
         <Button variant="outline" onClick={handleBack} data-testid="button-back">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Job
@@ -164,24 +164,24 @@ export default function JobPrintPreview() {
       </div>
 
       {/* Print Content */}
-      <div className="max-w-4xl mx-auto bg-white print:bg-white text-black">
+      <div className="max-w-4xl mx-auto bg-white print:bg-white text-black print:max-w-none">
         {/* Header */}
-        <div className="text-center border-b-2 border-black pb-4 mb-6">
-          <h1 className="text-2xl font-bold">CAXTON PRINT</h1>
-          <p className="text-sm text-gray-600">Job Card / Work Order</p>
-          <div className="mt-2 flex justify-center gap-8">
-            <span className="font-bold text-lg">{formattedJobNumber}</span>
-            <span className="text-sm">Date: {formatDate(job.createdAt)}</span>
+        <div className="text-center border-b-2 border-black pb-2 mb-2">
+          <h1 className="text-lg font-bold">CAXTON PRINT</h1>
+          <p className="text-xs text-gray-600">Job Card / Work Order</p>
+          <div className="mt-1 flex justify-center gap-8">
+            <span className="font-bold text-base">{formattedJobNumber}</span>
+            <span className="text-xs">Date: {formatDate(job.createdAt)}</span>
           </div>
         </div>
 
         {/* Client Details */}
-        <Card className="mb-4 print:shadow-none print:border">
-          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">Client Details</CardTitle>
+        <Card className="mb-1 print:shadow-none print:border">
+          <CardHeader className="py-1 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-sm font-semibold">Client Details</CardTitle>
           </CardHeader>
-          <CardContent className="py-2">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="py-1">
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <InfoRow label="Client Name" value={client?.name} />
                 <InfoRow label="Company" value={client?.company} />
@@ -197,12 +197,12 @@ export default function JobPrintPreview() {
         </Card>
 
         {/* Section 1: Basic Information */}
-        <Card className="mb-4 print:shadow-none print:border">
-          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">1. Basic Information</CardTitle>
+        <Card className="mb-1 print:shadow-none print:border">
+          <CardHeader className="py-1 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-sm font-semibold">1. Basic Information</CardTitle>
           </CardHeader>
-          <CardContent className="py-2">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="py-1">
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <InfoRow label="Product Category" value={productCategory?.name} />
                 <InfoRow label="Job Name" value={job.jobName} />
@@ -214,19 +214,19 @@ export default function JobPrintPreview() {
                 <InfoRow label="Delivery Deadline" value={formatDate(job.deadline)} />
               </div>
             </div>
-            <div className="mt-2">
-              <InfoRow label="Job Description" value={job.description} />
+            <div className="mt-1">
+              <InfoRow label="Remarks" value={job.description} />
             </div>
           </CardContent>
         </Card>
 
         {/* Section 2: Specifications & Quantity */}
-        <Card className="mb-4 print:shadow-none print:border">
-          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">2. Specifications & Quantity</CardTitle>
+        <Card className="mb-1 print:shadow-none print:border">
+          <CardHeader className="py-1 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-sm font-semibold">2. Specifications & Quantity</CardTitle>
           </CardHeader>
-          <CardContent className="py-2">
-            <div className="grid grid-cols-3 gap-4">
+          <CardContent className="py-1">
+            <div className="grid grid-cols-3 gap-2">
               <div>
                 <InfoRow label="Quantity" value={job.quantity} />
                 <InfoRow label="Size/Dimensions" value={job.size} />
@@ -241,19 +241,19 @@ export default function JobPrintPreview() {
                 <InfoRow label="Status" value={job.status} />
               </div>
             </div>
-            <div className="mt-2">
-              <InfoRow label="Job Specifications (Details)" value={job.jobSpecs} />
+            <div className="mt-1">
+              <InfoRow label="Remarks" value={job.jobSpecs} />
             </div>
           </CardContent>
         </Card>
 
         {/* Section 3: Additional Process */}
-        <Card className="mb-4 print:shadow-none print:border">
-          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">3. Additional Process</CardTitle>
+        <Card className="mb-1 print:shadow-none print:border">
+          <CardHeader className="py-1 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-sm font-semibold">3. Additional Process</CardTitle>
           </CardHeader>
-          <CardContent className="py-2">
-            <div className="grid grid-cols-3 gap-4">
+          <CardContent className="py-1">
+            <div className="grid grid-cols-3 gap-2">
               <div>
                 <InfoRow label="Lamination" value={additionalProcess.lamination} />
                 <InfoRow label="UV Coating" value={additionalProcess.uvCoating} />
@@ -270,12 +270,12 @@ export default function JobPrintPreview() {
         </Card>
 
         {/* Section 4: Cutting */}
-        <Card className="mb-4 print:shadow-none print:border">
-          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">4. Cutting</CardTitle>
+        <Card className="mb-1 print:shadow-none print:border">
+          <CardHeader className="py-1 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-sm font-semibold">4. Cutting</CardTitle>
           </CardHeader>
-          <CardContent className="py-2">
-            <div className="grid grid-cols-3 gap-4">
+          <CardContent className="py-1">
+            <div className="grid grid-cols-3 gap-2">
               <div>
                 <InfoRow label="Paper Size" value={cuttingSlip.paperSize} />
               </div>
@@ -286,19 +286,19 @@ export default function JobPrintPreview() {
                 <InfoRow label="Issue Sheets" value={cuttingSlip.issueSheets} />
               </div>
             </div>
-            <div className="mt-2">
+            <div className="mt-1">
               <InfoRow label="Remarks" value={cuttingSlip.notes} />
             </div>
           </CardContent>
         </Card>
 
         {/* Section 5: Printing Information */}
-        <Card className="mb-4 print:shadow-none print:border">
-          <CardHeader className="py-2 bg-gray-100 print:bg-gray-100">
-            <CardTitle className="text-lg">5. Printing Information</CardTitle>
+        <Card className="mb-1 print:shadow-none print:border">
+          <CardHeader className="py-1 bg-gray-100 print:bg-gray-100">
+            <CardTitle className="text-sm font-semibold">5. Printing Information</CardTitle>
           </CardHeader>
-          <CardContent className="py-2">
-            <div className="grid grid-cols-4 gap-4">
+          <CardContent className="py-1">
+            <div className="grid grid-cols-4 gap-2">
               <div>
                 <InfoRow label="Machine" value={printingInfo.machine} />
               </div>
@@ -312,14 +312,14 @@ export default function JobPrintPreview() {
                 <InfoRow label="Wastage" value={printingInfo.wastage} />
               </div>
             </div>
-            <div className="mt-2">
+            <div className="mt-1">
               <InfoRow label="Remarks" value={printingInfo.notes} />
             </div>
           </CardContent>
         </Card>
 
         {/* Footer */}
-        <div className="mt-8 pt-4 border-t text-center text-sm text-gray-500 print:mt-4">
+        <div className="mt-2 pt-1 border-t text-center text-xs text-gray-500">
           <p>Generated on {format(new Date(), "dd/MM/yyyy HH:mm")}</p>
         </div>
       </div>
@@ -327,6 +327,10 @@ export default function JobPrintPreview() {
       {/* Print Styles */}
       <style>{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 8mm;
+          }
           body {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -345,6 +349,15 @@ export default function JobPrintPreview() {
           }
           .print\\:bg-gray-100 {
             background-color: #f3f4f6 !important;
+          }
+          .print\\:p-0 {
+            padding: 0 !important;
+          }
+          .print\\:m-0 {
+            margin: 0 !important;
+          }
+          .print\\:max-w-none {
+            max-width: none !important;
           }
         }
       `}</style>
