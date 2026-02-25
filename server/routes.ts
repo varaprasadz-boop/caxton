@@ -911,6 +911,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         machineIds: "Machines",
       };
 
+      // Normalize a value to a canonical string for comparison.
+      // null, undefined, '', and objects/arrays containing only empty/null values all become ''.
+      const normalizeForDiff = (val: any): string => {
+        if (val === null || val === undefined) return '';
+        if (val instanceof Date) return val.toISOString().split('T')[0];
+        if (typeof val === 'string') return val.trim();
+        if (Array.isArray(val)) {
+          const cleaned = val.filter(v => v !== null && v !== undefined && v !== '');
+          return cleaned.length === 0 ? '' : JSON.stringify([...cleaned].sort());
+        }
+        if (typeof val === 'object') {
+          // Strip keys with empty/null/undefined values recursively
+          const cleaned: Record<string, any> = {};
+          for (const [k, v] of Object.entries(val)) {
+            if (v !== null && v !== undefined && v !== '') {
+              cleaned[k] = v;
+            }
+          }
+          return Object.keys(cleaned).length === 0 ? '' : JSON.stringify(cleaned);
+        }
+        return String(val).trim();
+      };
+
       const changes: { field: string; label: string; oldValue: string; newValue: string }[] = [];
       
       for (const [field, label] of Object.entries(fieldLabels)) {
@@ -918,19 +941,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const newVal = (validatedData as any)[field];
         if (newVal === undefined) continue;
         
-        const oldStr = oldVal instanceof Date
-          ? oldVal.toISOString().split('T')[0]
-          : oldVal !== null && oldVal !== undefined
-            ? typeof oldVal === 'object' ? JSON.stringify(oldVal) : String(oldVal)
-            : '';
-        const newStr = newVal instanceof Date
-          ? newVal.toISOString().split('T')[0]
-          : newVal !== null && newVal !== undefined
-            ? typeof newVal === 'object' ? JSON.stringify(newVal) : String(newVal)
-            : '';
+        const oldStr = normalizeForDiff(oldVal);
+        const newStr = normalizeForDiff(newVal);
         
         if (oldStr !== newStr) {
-          changes.push({ field, label, oldValue: oldStr, newValue: newStr });
+          // Use human-readable display values (not the normalized ones)
+          const displayOld = oldVal instanceof Date
+            ? oldVal.toISOString().split('T')[0]
+            : (oldVal === null || oldVal === undefined || oldVal === '') ? '—'
+            : typeof oldVal === 'object' ? JSON.stringify(oldVal) : String(oldVal);
+          const displayNew = newVal instanceof Date
+            ? newVal.toISOString().split('T')[0]
+            : (newVal === null || newVal === undefined || newVal === '') ? '—'
+            : typeof newVal === 'object' ? JSON.stringify(newVal) : String(newVal);
+          changes.push({ field, label, oldValue: displayOld, newValue: displayNew });
         }
       }
 
