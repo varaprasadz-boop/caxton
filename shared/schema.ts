@@ -108,6 +108,8 @@ export const jobs = pgTable("jobs", {
   items: json("items"), // Array of { item1, item2, remarks }
   // Party press remarks
   partyPressRemarks: text("party_press_remarks"),
+  // Specifications extra field
+  upNumber: varchar("up_number"),
 });
 
 // Tasks table
@@ -210,6 +212,8 @@ export const additionalProcessSchema = z.object({
   foiling: z.string().optional(),
   embossing: z.string().optional(),
   dieCutting: z.string().optional(),
+  folding: z.string().optional(),
+  foldingSize: z.string().optional(),
 }).optional();
 
 export const cuttingSlipSchema = z.object({
@@ -290,7 +294,7 @@ export type JobActivityLog = typeof jobActivityLog.$inferSelect;
 export type ActivityChange = { field: string; label: string; oldValue: string; newValue: string };
 
 // Job types enum
-export const JOB_TYPES = ["Carton", "Booklet", "Pouch Folder", "Flyers", "Business Cards", "Brochures"] as const;
+export const JOB_TYPES = ["Carton", "Booklet", "Pouch Folder", "Flyers", "Business Cards", "Brochures", "Leaflet"] as const;
 export type JobType = typeof JOB_TYPES[number];
 
 // Employee roles enum
@@ -321,6 +325,8 @@ export function getWorkflowStages(jobType: string): TaskStage[] {
   if (["Booklet", "Brochures"].includes(jobType)) {
     return ["Pre-Press", "Printing", "Cutting", "Folding", "Binding", "QC", "Packaging", "Dispatch"];
   } else if (["Carton", "Pouch Folder"].includes(jobType)) {
+    return ["Pre-Press", "Printing", "Cutting", "Folding", "QC", "Packaging", "Dispatch"];
+  } else if (jobType === "Leaflet") {
     return ["Pre-Press", "Printing", "Cutting", "Folding", "QC", "Packaging", "Dispatch"];
   } else {
     return ["Pre-Press", "Printing", "Cutting", "QC", "Packaging", "Dispatch"];
