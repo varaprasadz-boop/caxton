@@ -13,14 +13,7 @@ import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-function formatJobNumber(jobNumber: number, createdAt: string | Date | null): string {
-  if (!createdAt) return `CAX${String(jobNumber).padStart(4, '0')}`;
-  const date = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
-  const paddedNumber = String(jobNumber).padStart(4, '0');
-  const year = date.getFullYear();
-  const nextYear = String(year + 1).slice(-2); // Get last 2 digits of next year
-  return `CAX${paddedNumber}/${year}-${nextYear}`;
-}
+import { formatJobNumber } from "@/lib/formatJobNumber";
 
 function formatTaskId(job: Job | undefined, taskSequence: number): string {
   if (!job) return `Unknown/${taskSequence}`;

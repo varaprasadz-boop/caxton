@@ -56,6 +56,7 @@ export default function EditJobDialog({ job, open, onOpenChange }: EditJobDialog
     paper: job.paper || "",
     finishingOptions: job.finishingOptions || "",
     jobSpecs: job.jobSpecs || "",
+    upNumber: (job as any).upNumber || "",
   });
 
   const [additional, setAdditional] = useState({
@@ -64,6 +65,8 @@ export default function EditJobDialog({ job, open, onOpenChange }: EditJobDialog
     foiling: additionalProcess.foiling || "",
     embossing: additionalProcess.embossing || "",
     dieCutting: additionalProcess.dieCutting || "",
+    folding: additionalProcess.folding || "",
+    foldingSize: additionalProcess.foldingSize || "",
   });
 
   const [cutting, setCutting] = useState({
@@ -133,6 +136,7 @@ export default function EditJobDialog({ job, open, onOpenChange }: EditJobDialog
       paper: specs.paper,
       finishingOptions: specs.finishingOptions,
       jobSpecs: specs.jobSpecs,
+      upNumber: specs.upNumber,
       partyPressRemarks,
       additionalProcess: additional,
       cuttingSlip: cutting,
@@ -243,6 +247,10 @@ export default function EditJobDialog({ job, open, onOpenChange }: EditJobDialog
                 <Label>Finishing Options</Label>
                 <Input value={specs.finishingOptions} onChange={e => setSpecs(p => ({ ...p, finishingOptions: e.target.value }))} data-testid="input-edit-finishing" />
               </div>
+              <div className="space-y-2">
+                <Label>Up Number</Label>
+                <Input value={specs.upNumber} onChange={e => setSpecs(p => ({ ...p, upNumber: e.target.value }))} placeholder="e.g. 4" data-testid="input-edit-up-number" />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Remarks</Label>
@@ -272,6 +280,14 @@ export default function EditJobDialog({ job, open, onOpenChange }: EditJobDialog
               <div className="space-y-2">
                 <Label>Die Cutting</Label>
                 <Input value={additional.dieCutting} onChange={e => setAdditional(p => ({ ...p, dieCutting: e.target.value }))} data-testid="input-edit-die-cutting" />
+              </div>
+              <div className="space-y-2">
+                <Label>Folding</Label>
+                <Input value={additional.folding} onChange={e => setAdditional(p => ({ ...p, folding: e.target.value }))} placeholder="e.g. Half fold, Tri-fold" data-testid="input-edit-folding" />
+              </div>
+              <div className="space-y-2">
+                <Label>Folding Size</Label>
+                <Input value={additional.foldingSize} onChange={e => setAdditional(p => ({ ...p, foldingSize: e.target.value }))} placeholder="e.g. A5, 148x210mm" data-testid="input-edit-folding-size" />
               </div>
             </div>
           </TabsContent>

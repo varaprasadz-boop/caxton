@@ -55,6 +55,7 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
     scheduleDate: undefined,
     cls: "",
     paper: "",
+    upNumber: "",
     prePressSpecs: {},
     printingInfo: {},
     additionalProcess: {},
@@ -567,16 +568,26 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                       data-testid="input-job-finishing"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="upNumber">Up Number</Label>
+                    <Input
+                      id="upNumber"
+                      value={(formData as any).upNumber || ""}
+                      onChange={handleChange("upNumber" as any)}
+                      placeholder="e.g. 4"
+                      data-testid="input-job-up-number"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 mt-2">
                   <Label htmlFor="jobSpecs">Remarks</Label>
                   <Textarea
                     id="jobSpecs"
                     value={formData.jobSpecs || ""}
                     onChange={handleChange("jobSpecs")}
                     placeholder="Detailed job specifications..."
-                    rows={2}
+                    rows={3}
                     data-testid="textarea-job-specs"
                   />
                 </div>
@@ -635,6 +646,24 @@ export default function CreateJobForm({ onSuccess, onCancel }: CreateJobFormProp
                       onChange={handleJsonFieldChange('additionalProcess', 'dieCutting')}
                       placeholder="Die cutting specifications"
                       data-testid="input-additional-die"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Folding</Label>
+                    <Input
+                      value={(formData.additionalProcess as any)?.folding || ""}
+                      onChange={handleJsonFieldChange('additionalProcess', 'folding')}
+                      placeholder="e.g. Half fold, Tri-fold"
+                      data-testid="input-additional-folding"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Folding Size</Label>
+                    <Input
+                      value={(formData.additionalProcess as any)?.foldingSize || ""}
+                      onChange={handleJsonFieldChange('additionalProcess', 'foldingSize')}
+                      placeholder="e.g. A5, 148x210mm"
+                      data-testid="input-additional-folding-size"
                     />
                   </div>
                 </div>

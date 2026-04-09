@@ -662,6 +662,10 @@ export default function JobDetail() {
                     <p className="text-sm font-medium text-muted-foreground">Finishing Options</p>
                     <p className="text-sm">{job.finishingOptions || '-'}</p>
                   </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Up Number</p>
+                    <p className="text-sm">{(job as any).upNumber || '-'}</p>
+                  </div>
                   {job.jobSpecs && (
                     <div className="col-span-full">
                       <p className="text-sm font-medium text-muted-foreground">Additional Specifications</p>
@@ -715,6 +719,14 @@ export default function JobDetail() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Die Cutting</p>
                     <p className="text-sm">{additionalProcess.dieCutting || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Folding</p>
+                    <p className="text-sm">{additionalProcess.folding || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Folding Size</p>
+                    <p className="text-sm">{additionalProcess.foldingSize || '-'}</p>
                   </div>
                 </CardContent>
               </CollapsibleContent>

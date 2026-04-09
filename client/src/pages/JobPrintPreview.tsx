@@ -4,16 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Printer } from "lucide-react";
 import { format } from "date-fns";
-import { type Job, type Client, type Machine, type Department, type ProductCategory, type StageDeadlines } from "@shared/schema";
-
-function formatJobNumber(jobNumber: number, createdAt: Date | null): string {
-  if (!createdAt) return `CAX${String(jobNumber).padStart(4, '0')}`;
-  const date = new Date(createdAt);
-  const paddedNumber = String(jobNumber).padStart(4, '0');
-  const year = date.getFullYear();
-  const nextYear = String(year + 1).slice(-2);
-  return `CAX${paddedNumber}/${year}-${nextYear}`;
-}
+import { type Job, type Client, type Machine, type Department, type ProductCategory, type StageDeadlines, type CompanySettings } from "@shared/schema";
+import { formatJobNumber } from "@/lib/formatJobNumber";
 
 export default function JobPrintPreview() {
   const { id } = useParams<{ id: string }>();
@@ -53,6 +45,10 @@ export default function JobPrintPreview() {
 
   const { data: productCategories = [] } = useQuery<ProductCategory[]>({
     queryKey: ["/api/product-categories"]
+  });
+
+  const { data: companySettings } = useQuery<CompanySettings>({
+    queryKey: ["/api/company-settings"]
   });
 
   const handleBack = () => {
@@ -167,7 +163,7 @@ export default function JobPrintPreview() {
       <div className="max-w-4xl mx-auto bg-white print:bg-white text-black print:max-w-none">
         {/* Header */}
         <div className="text-center border-b-2 border-black pb-2 mb-2">
-          <h1 className="text-lg font-bold">CAXTON PRINT</h1>
+          <h1 className="text-lg font-bold">{companySettings?.companyName?.toUpperCase() ?? "CAXTON"}</h1>
           <p className="text-xs text-gray-600">Job Card / Work Order</p>
           <div className="mt-1 flex justify-center gap-8">
             <span className="font-bold text-base">{formattedJobNumber}</span>
@@ -238,7 +234,7 @@ export default function JobPrintPreview() {
                 <InfoRow label="Finishing Options" value={job.finishingOptions} />
               </div>
               <div>
-                <InfoRow label="Status" value={job.status} />
+                <InfoRow label="Up Number" value={(job as any).upNumber} />
               </div>
             </div>
             <div className="mt-1">
@@ -264,6 +260,8 @@ export default function JobPrintPreview() {
               </div>
               <div>
                 <InfoRow label="Die Cutting" value={additionalProcess.dieCutting} />
+                <InfoRow label="Folding" value={additionalProcess.folding} />
+                <InfoRow label="Folding Size" value={additionalProcess.foldingSize} />
               </div>
             </div>
           </CardContent>

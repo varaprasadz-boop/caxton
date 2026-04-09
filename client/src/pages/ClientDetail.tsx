@@ -2,10 +2,14 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Edit, User, Mail, Phone, Building2, MapPin, FileText, Briefcase } from "lucide-react";
 import Modal from "@/components/Modal";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type Client, type Job } from "@shared/schema";
 import { format } from "date-fns";
@@ -15,6 +19,11 @@ export default function ClientDetail() {
   const [, setLocation] = useLocation();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [editForm, setEditForm] = useState({
+    name: "", company: "", email: "", phone: "", address: "", gstNo: "", paymentMethod: "Cash"
+  });
 
   // Fetch client details
   const { data: client, isLoading } = useQuery<Client>({
@@ -36,6 +45,37 @@ export default function ClientDetail() {
   const clientJobs = allJobs.filter(job => job.clientId === id);
   const activeJobs = clientJobs.filter(job => !["completed", "delivered"].includes(job.status));
   const completedJobs = clientJobs.filter(job => ["completed", "delivered"].includes(job.status));
+
+  const updateClientMutation = useMutation({
+    mutationFn: async (data: typeof editForm) => {
+      const res = await apiRequest("PATCH", `/api/clients/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients", id] });
+      setIsEditModalOpen(false);
+      toast({ title: "Client updated", description: "Client information has been saved." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update client.", variant: "destructive" });
+    },
+  });
+
+  const openEditModal = () => {
+    if (client) {
+      setEditForm({
+        name: client.name,
+        company: client.company,
+        email: client.email,
+        phone: client.phone,
+        address: client.address || "",
+        gstNo: client.gstNo || "",
+        paymentMethod: client.paymentMethod || "Cash",
+      });
+    }
+    setIsEditModalOpen(true);
+  };
 
   const handleBack = () => {
     setLocation("/clients");
@@ -79,7 +119,7 @@ export default function ClientDetail() {
             variant="outline" 
             size="sm" 
             disabled={isLoading || !client}
-            onClick={() => setIsEditModalOpen(true)}
+            onClick={openEditModal}
             data-testid="button-edit-client"
           >
             <Edit className="h-4 w-4 mr-2" />
@@ -252,17 +292,63 @@ export default function ClientDetail() {
         </Card>
       )}
 
-      {/* Edit Client Modal - Placeholder for now */}
+      {/* Edit Client Modal */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         title="Edit Client"
       >
-        <div className="p-6">
-          <p className="text-muted-foreground">Edit client functionality will be implemented here.</p>
-          <Button variant="outline" onClick={() => setIsEditModalOpen(false)} className="mt-4">
-            Cancel
-          </Button>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Name *</Label>
+              <Input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} data-testid="input-edit-client-name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Company *</Label>
+              <Input value={editForm.company} onChange={e => setEditForm(p => ({ ...p, company: e.target.value }))} data-testid="input-edit-client-company" />
+            </div>
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} data-testid="input-edit-client-email" />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone *</Label>
+              <Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} data-testid="input-edit-client-phone" />
+            </div>
+            <div className="space-y-2">
+              <Label>GST Number</Label>
+              <Input value={editForm.gstNo} onChange={e => setEditForm(p => ({ ...p, gstNo: e.target.value }))} data-testid="input-edit-client-gst" />
+            </div>
+            <div className="space-y-2">
+              <Label>Payment Method</Label>
+              <Select value={editForm.paymentMethod} onValueChange={v => setEditForm(p => ({ ...p, paymentMethod: v }))}>
+                <SelectTrigger data-testid="select-edit-client-payment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Online">Online</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="Credit">Credit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Address</Label>
+            <Input value={editForm.address} onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))} data-testid="input-edit-client-address" />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)} data-testid="button-cancel-edit-client">Cancel</Button>
+            <Button
+              onClick={() => updateClientMutation.mutate(editForm)}
+              disabled={updateClientMutation.isPending || !editForm.name || !editForm.company || !editForm.email || !editForm.phone}
+              data-testid="button-save-edit-client"
+            >
+              {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

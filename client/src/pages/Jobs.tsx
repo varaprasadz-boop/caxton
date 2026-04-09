@@ -14,15 +14,7 @@ import type { Job, Client, Task } from "@shared/schema";
 import { format } from "date-fns";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
-
-function formatJobNumber(jobNumber: number, createdAt: Date | null): string {
-  if (!createdAt) return `CAX${String(jobNumber).padStart(4, '0')}`;
-  const date = new Date(createdAt);
-  const paddedNumber = String(jobNumber).padStart(4, '0');
-  const year = date.getFullYear();
-  const nextYear = String(year + 1).slice(-2); // Get last 2 digits of next year
-  return `CAX${paddedNumber}/${year}-${nextYear}`;
-}
+import { formatJobNumber } from "@/lib/formatJobNumber";
 
 export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,11 +31,15 @@ export default function Jobs() {
   });
 
   const { data: clients = [] } = useQuery<Client[]>({
-    queryKey: ["/api/clients"]
+    queryKey: ["/api/clients"],
+    retry: false,
+    throwOnError: false,
   });
 
   const { data: tasks = [] } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"]
+    queryKey: ["/api/tasks"],
+    retry: false,
+    throwOnError: false,
   });
 
   // Create client lookup map
@@ -219,6 +215,7 @@ export default function Jobs() {
               <SelectItem value="Flyers">Flyers</SelectItem>
               <SelectItem value="Carton">Carton</SelectItem>
               <SelectItem value="Pouch Folder">Pouch Folder</SelectItem>
+              <SelectItem value="Leaflet">Leaflet</SelectItem>
             </SelectContent>
           </Select>
         </div>
