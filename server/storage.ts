@@ -31,7 +31,7 @@ import {
   jobActivityLog
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { eq, max, desc, and, gte, lt } from "drizzle-orm";
+import { sql, eq, max, desc } from "drizzle-orm";
 import { db } from "./db";
 
 // modify the interface with any CRUD methods
@@ -613,22 +613,30 @@ export class PostgreSQLStorage implements IStorage {
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    const now = new Date();
-    const month = now.getMonth() + 1; // 1-12
-    const year = now.getFullYear();
-    const fyStart = month >= 4 ? year : year - 1;
-    const fyBegin = new Date(`${fyStart}-04-01T00:00:00.000Z`);
-    const fyEnd = new Date(`${fyStart + 1}-04-01T00:00:00.000Z`);
+    return await db.transaction(async (tx) => {
+      // Serialise concurrent creates so two requests never pick the same number.
+      // pg_advisory_xact_lock is released automatically when the transaction ends.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(87654321)`);
 
-    const [{ maxNum }] = await db
-      .select({ maxNum: max(jobs.jobNumber) })
-      .from(jobs)
-      .where(and(gte(jobs.createdAt, fyBegin), lt(jobs.createdAt, fyEnd)));
+      // Fiscal-year grouping: subtracting 3 months shifts April → January of the
+      // same calendar year, so EXTRACT(YEAR) gives a consistent FY key that avoids
+      // any timezone-boundary ambiguity (all arithmetic stays inside the DB).
+      const [{ maxNum }] = await tx
+        .select({ maxNum: max(jobs.jobNumber) })
+        .from(jobs)
+        .where(
+          sql`EXTRACT(YEAR FROM ${jobs.createdAt} - INTERVAL '3 months') =
+              EXTRACT(YEAR FROM NOW() - INTERVAL '3 months')`
+        );
 
-    const nextJobNumber = (maxNum ?? 0) + 1;
+      const nextJobNumber = (maxNum ?? 0) + 1;
 
-    const result = await db.insert(jobs).values({ ...insertJob, jobNumber: nextJobNumber }).returning();
-    return result[0];
+      const result = await tx
+        .insert(jobs)
+        .values({ ...insertJob, jobNumber: nextJobNumber })
+        .returning();
+      return result[0];
+    });
   }
 
   async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
