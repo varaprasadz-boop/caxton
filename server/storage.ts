@@ -31,7 +31,7 @@ import {
   jobActivityLog
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { eq, max, desc } from "drizzle-orm";
+import { eq, max, desc, and, gte, lt } from "drizzle-orm";
 import { db } from "./db";
 
 // modify the interface with any CRUD methods
@@ -613,7 +613,21 @@ export class PostgreSQLStorage implements IStorage {
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    const result = await db.insert(jobs).values(insertJob).returning();
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1-12
+    const year = now.getFullYear();
+    const fyStart = month >= 4 ? year : year - 1;
+    const fyBegin = new Date(`${fyStart}-04-01T00:00:00.000Z`);
+    const fyEnd = new Date(`${fyStart + 1}-04-01T00:00:00.000Z`);
+
+    const [{ maxNum }] = await db
+      .select({ maxNum: max(jobs.jobNumber) })
+      .from(jobs)
+      .where(and(gte(jobs.createdAt, fyBegin), lt(jobs.createdAt, fyEnd)));
+
+    const nextJobNumber = (maxNum ?? 0) + 1;
+
+    const result = await db.insert(jobs).values({ ...insertJob, jobNumber: nextJobNumber }).returning();
     return result[0];
   }
 
