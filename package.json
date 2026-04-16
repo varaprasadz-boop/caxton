@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist/public",
-    "start": "NODE_ENV=production tsx server/index.ts"
+    "start": "NODE_ENV=production tsx server/index.ts",
+    "test:reports": "node scripts/test-reports.mjs"
   },
   "homepage": "https://caxton.onrender.com/",
   "dependencies": {
